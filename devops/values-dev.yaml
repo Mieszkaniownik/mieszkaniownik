@@ -1,0 +1,148 @@
+global:
+  environment: development
+
+backend:
+  replicaCount: 1
+
+  image:
+    tag: 'dev'
+
+  service:
+    type: NodePort
+    port: 5001
+    nodePort: 30001
+
+  env:
+    NODE_ENV: development
+    LOG_LEVEL: debug
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+  healthChecks:
+    enabled: true
+    livenessProbe:
+      httpGet:
+        path: /wakacyjne/health
+        port: http
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 5
+    readinessProbe:
+      httpGet:
+        path: /wakacyjne/health
+        port: http
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 5
+
+frontend:
+  replicaCount: 1
+
+  image:
+    tag: 'dev'
+
+  service:
+    type: NodePort
+    port: 80
+    targetPort: 5002
+    nodePort: 30002
+
+  env:
+    NODE_ENV: development
+    NEXT_PUBLIC_API_URL: http://mieszkaniownik-dev.local/api
+
+  healthChecks:
+    enabled: true
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 5002
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 5002
+      initialDelaySeconds: 10
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 300m
+      memory: 512Mi
+
+database:
+  postgresql:
+    enabled: false
+  custom:
+    enabled: true
+    image:
+      tag: '13'
+    persistence:
+      enabled: true
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 300m
+        memory: 512Mi
+
+databaseJobs:
+  migrate:
+    enabled: true
+    image:
+      tag: 'dev'
+  seed:
+    enabled: true
+    image:
+      repository: mieszkaniownik-backend
+      tag: 'dev'
+      pullPolicy: Never
+
+secrets:
+  postgresql:
+    existingSecret: 'postgres-dev-credentials'
+    userKey: 'username-dev'
+    passwordKey: 'password-dev'
+    POSTGRES_USER: ''
+    POSTGRES_PASSWORD: ''
+
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: mieszkaniownik-dev.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+
+autoscaling:
+  backend:
+    enabled: false
+  frontend:
+    enabled: false
+
+podSecurityContext: {}
+
+securityContext: {}
+
+networkPolicy:
+  enabled: false
