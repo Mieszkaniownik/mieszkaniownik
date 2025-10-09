@@ -67,6 +67,7 @@
     "rxjs": "^7.8.1",
     "swagger-ui-express": "^5.0.1",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3"
   },
   "devDependencies": {
@@ -95,7 +96,7 @@
     "typescript-eslint": "^8.20.0"
   },
   "prisma": {
-    "seed": "npx ts-node prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "jest": {
     "moduleFileExtensions": [
