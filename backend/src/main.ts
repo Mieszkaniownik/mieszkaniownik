@@ -36,12 +36,18 @@ async function bootstrap() {
       }
 
       const localhostPattern = /^https?:\/\/localhost:(50\d{2}|5[1-5]\d{2})$/;
+      const ipPattern =
+        /^https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:(50\d{2}|5[1-5]\d{2})$/;
       const allowedDomains = [
         'http://mieszkaniownik-dev.local',
         'http://mieszkaniownik-prod.local',
       ];
 
-      if (localhostPattern.test(origin) || allowedDomains.includes(origin)) {
+      if (
+        localhostPattern.test(origin) ||
+        ipPattern.test(origin) ||
+        allowedDomains.includes(origin)
+      ) {
         callback(null, true);
         return;
       }
