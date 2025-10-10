@@ -9,7 +9,12 @@ import {
   Res,
   UseGuards,
 } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response, Request } from 'express';
 
@@ -17,6 +22,8 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from '../user/dto/register.dto';
 import { ResponseDto } from './dto/response.dto';
+import { AuthGuard as JwtAuthGuard } from './auth.guard';
+import { UserResponseDto } from '../user/dto/user-response.dto';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -65,6 +72,30 @@ export class AuthController {
       registerDto.surname,
       registerDto.password,
     );
+  }
+
+  @Get('me')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Get current user information',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User information retrieved successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized - invalid or missing token',
+  })
+  async getCurrentUser(
+    @Req() req: Request & { user: { email: string } },
+  ): Promise<UserResponseDto> {
+    return this.authService.validateToken({
+      email: req.user.email,
+      sub: req.user.email,
+    });
   }
 
   @Get('google/available')

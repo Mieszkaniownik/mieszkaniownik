@@ -73,13 +73,23 @@ export class AuthService {
     surname: string | undefined,
     password: string,
   ): Promise<ResponseDto> {
-    const existingUser = await this.userService.findOne(email);
-    if (existingUser != null) {
-      if (!existingUser.active) {
-        throw new ConflictException('User with this email is disabled');
+    try {
+      const existingUser = await this.userService.findOne(email);
+      if (existingUser) {
+        if (!existingUser.active) {
+          throw new ConflictException('User with this email is disabled');
+        }
+        throw new ConflictException('User with this email exists');
       }
-      throw new ConflictException('User with this email exists');
+    } catch (error) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
     }
+
     const registerDto: RegisterDto = {
       email,
       password,
@@ -87,13 +97,14 @@ export class AuthService {
       surname,
     };
     const user = await this.userService.create(registerDto);
-    const token = await this.generateToken(user.email);
+    const payload = { email: user.email, sub: user.email, role: user.role };
+    const token = this.jwtService.sign(payload);
     return { token };
   }
 
   async googleLogin(googleUser: GoogleUser): Promise<ResponseDto> {
     try {
-      let user = await this.userService
+      const user = await this.userService
         .findOne(googleUser.email)
         .catch(() => null);
 
@@ -108,6 +119,10 @@ export class AuthService {
         if (!user.active) {
           throw new UnauthorizedException('User account is disabled');
         }
+
+        const payload = { email: user.email, sub: user.email, role: user.role };
+        const token = this.jwtService.sign(payload);
+        return { token };
       } else {
         const registerDto: RegisterDto = {
           email: googleUser.email,
@@ -118,11 +133,15 @@ export class AuthService {
         };
 
         const newUser = await this.userService.createGoogleUser(registerDto);
-        user = await this.userService.findOne(newUser.email);
-      }
 
-      const token = await this.generateToken(user!.email);
-      return { token };
+        const payload = {
+          email: newUser.email,
+          sub: newUser.email,
+          role: newUser.role,
+        };
+        const token = this.jwtService.sign(payload);
+        return { token };
+      }
     } catch (error) {
       if (
         error instanceof ConflictException ||
@@ -130,6 +149,7 @@ export class AuthService {
       ) {
         throw error;
       }
+      console.error('Google authentication error:', error);
       throw new UnauthorizedException('Google authentication failed');
     }
   }
