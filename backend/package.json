@@ -55,6 +55,7 @@
     "discord.js": "^14.22.1",
     "dotenv": "^17.2.3",
     "google-auth-library": "^10.4.0",
+    "googleapis": "^161.0.0",
     "ioredis": "^5.8.0",
     "jsdom": "^27.0.0",
     "node-cron": "^4.2.1",
