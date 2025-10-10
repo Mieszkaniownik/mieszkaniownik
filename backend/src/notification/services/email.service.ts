@@ -239,7 +239,7 @@ export class EmailService {
     }
 
     const size = '600x400';
-    const zoom = '13';
+    const zoom = '14';
     const maptype = 'roadmap';
 
     if (latitude && longitude) {

@@ -211,7 +211,7 @@ export class ScraperThreadManagerService {
   public async scrapeOlxWithWorkers(
     maxPages = 25,
     sortOrder: SortOrder = SortOrder.NEWEST,
-    maxConcurrentWorkers = 3,
+    maxConcurrentWorkers = 1,
   ): Promise<{ totalOffers: number; pagesProcessed: number }> {
     this.logger.log(
       `Starting multi-threaded OLX scraping with ${maxConcurrentWorkers} workers`,
@@ -223,43 +223,91 @@ export class ScraperThreadManagerService {
     const activeWorkers = new Set<Worker>();
 
     const createWorker = (pageNum: number): Promise<WorkerResult> => {
-      return new Promise((resolve, reject) => {
-        const workerData: WorkerData = {
-          pageNum,
-          sortOrder,
-          baseUrl: this.olxBaseUrl,
-          userAgents: this.userAgents,
-          isNewOffersOnly: false,
-        };
+      return new Promise((resolve) => {
+        try {
+          const workerData: WorkerData = {
+            pageNum,
+            sortOrder,
+            baseUrl: this.olxBaseUrl,
+            userAgents: this.userAgents,
+            isNewOffersOnly: false,
+          };
 
-        const workerPath = path.join(
-          __dirname,
-          '..',
-          'workers',
-          'olx-worker.js',
-        );
-        const worker = new Worker(workerPath, { workerData });
+          const workerPath = path.join(
+            __dirname,
+            '..',
+            'workers',
+            'olx-worker.js',
+          );
+          const worker = new Worker(workerPath, { workerData });
 
-        activeWorkers.add(worker);
+          activeWorkers.add(worker);
 
-        worker.on('message', (result: WorkerResult) => {
-          activeWorkers.delete(worker);
-          resolve(result);
-        });
+          const timeout = setTimeout(() => {
+            this.logger.warn(
+              `OLX Worker timeout on page ${pageNum}, terminating...`,
+            );
+            void worker.terminate();
+            activeWorkers.delete(worker);
+            resolve({
+              success: false,
+              offers: [],
+              hasNextPage: false,
+              pageNum,
+              source: 'olx',
+              error: 'Worker timeout',
+            });
+          }, 60000); // 60 second timeout
 
-        worker.on('error', (error) => {
-          activeWorkers.delete(worker);
-          this.logger.error(`OLX Worker error on page ${pageNum}:`, error);
-          reject(error);
-        });
+          worker.on('message', (result: WorkerResult) => {
+            clearTimeout(timeout);
+            activeWorkers.delete(worker);
+            resolve(result);
+          });
 
-        worker.on('exit', (code) => {
-          activeWorkers.delete(worker);
-          if (code !== 0) {
-            this.logger.error(`OLX Worker stopped with exit code ${code}`);
-            reject(new Error(`Worker stopped with exit code ${code}`));
-          }
-        });
+          worker.on('error', (error) => {
+            clearTimeout(timeout);
+            activeWorkers.delete(worker);
+            this.logger.error(`OLX Worker error on page ${pageNum}:`, error);
+            resolve({
+              success: false,
+              offers: [],
+              hasNextPage: false,
+              pageNum,
+              source: 'olx',
+              error: error.message,
+            });
+          });
+
+          worker.on('exit', (code) => {
+            clearTimeout(timeout);
+            activeWorkers.delete(worker);
+            if (code !== 0) {
+              this.logger.error(`OLX Worker stopped with exit code ${code}`);
+              resolve({
+                success: false,
+                offers: [],
+                hasNextPage: false,
+                pageNum,
+                source: 'olx',
+                error: `Worker exit code ${code}`,
+              });
+            }
+          });
+        } catch (error) {
+          this.logger.error(
+            `Failed to create OLX worker for page ${pageNum}:`,
+            error,
+          );
+          resolve({
+            success: false,
+            offers: [],
+            hasNextPage: false,
+            pageNum,
+            source: 'olx',
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
       });
     };
 
@@ -329,7 +377,7 @@ export class ScraperThreadManagerService {
 
   public async scrapeOtodomWithWorkers(
     maxPages = 500,
-    maxConcurrentWorkers = 3,
+    maxConcurrentWorkers = 1,
   ): Promise<{ totalOffers: number; pagesProcessed: number }> {
     this.logger.log(
       `Starting multi-threaded Otodom scraping with ${maxConcurrentWorkers} workers`,
@@ -341,43 +389,91 @@ export class ScraperThreadManagerService {
     const activeWorkers = new Set<Worker>();
 
     const createWorker = (pageNum: number): Promise<WorkerResult> => {
-      return new Promise((resolve, reject) => {
-        const workerData: WorkerData = {
-          pageNum,
-          sortOrder: 'created_at:desc',
-          baseUrl: this.otodomBaseUrl,
-          userAgents: this.userAgents,
-          isNewOffersOnly: false,
-        };
+      return new Promise((resolve) => {
+        try {
+          const workerData: WorkerData = {
+            pageNum,
+            sortOrder: 'created_at:desc',
+            baseUrl: this.otodomBaseUrl,
+            userAgents: this.userAgents,
+            isNewOffersOnly: false,
+          };
 
-        const workerPath = path.join(
-          __dirname,
-          '..',
-          'workers',
-          'otodom-worker.js',
-        );
-        const worker = new Worker(workerPath, { workerData });
+          const workerPath = path.join(
+            __dirname,
+            '..',
+            'workers',
+            'otodom-worker.js',
+          );
+          const worker = new Worker(workerPath, { workerData });
 
-        activeWorkers.add(worker);
+          activeWorkers.add(worker);
 
-        worker.on('message', (result: WorkerResult) => {
-          activeWorkers.delete(worker);
-          resolve(result);
-        });
+          const timeout = setTimeout(() => {
+            this.logger.warn(
+              `Otodom Worker timeout on page ${pageNum}, terminating...`,
+            );
+            void worker.terminate();
+            activeWorkers.delete(worker);
+            resolve({
+              success: false,
+              offers: [],
+              hasNextPage: false,
+              pageNum,
+              source: 'otodom',
+              error: 'Worker timeout',
+            });
+          }, 60000); // 60 second timeout
 
-        worker.on('error', (error) => {
-          activeWorkers.delete(worker);
-          this.logger.error(`Otodom Worker error on page ${pageNum}:`, error);
-          reject(error);
-        });
+          worker.on('message', (result: WorkerResult) => {
+            clearTimeout(timeout);
+            activeWorkers.delete(worker);
+            resolve(result);
+          });
 
-        worker.on('exit', (code) => {
-          activeWorkers.delete(worker);
-          if (code !== 0) {
-            this.logger.error(`Otodom Worker stopped with exit code ${code}`);
-            reject(new Error(`Worker stopped with exit code ${code}`));
-          }
-        });
+          worker.on('error', (error) => {
+            clearTimeout(timeout);
+            activeWorkers.delete(worker);
+            this.logger.error(`Otodom Worker error on page ${pageNum}:`, error);
+            resolve({
+              success: false,
+              offers: [],
+              hasNextPage: false,
+              pageNum,
+              source: 'otodom',
+              error: error.message,
+            });
+          });
+
+          worker.on('exit', (code) => {
+            clearTimeout(timeout);
+            activeWorkers.delete(worker);
+            if (code !== 0) {
+              this.logger.error(`Otodom Worker stopped with exit code ${code}`);
+              resolve({
+                success: false,
+                offers: [],
+                hasNextPage: false,
+                pageNum,
+                source: 'otodom',
+                error: `Worker exit code ${code}`,
+              });
+            }
+          });
+        } catch (error) {
+          this.logger.error(
+            `Failed to create Otodom worker for page ${pageNum}:`,
+            error,
+          );
+          resolve({
+            success: false,
+            offers: [],
+            hasNextPage: false,
+            pageNum,
+            source: 'otodom',
+            error: error instanceof Error ? error.message : 'Unknown error',
+          });
+        }
       });
     };
 
@@ -458,8 +554,8 @@ export class ScraperThreadManagerService {
     this.logger.log('Starting multi-threaded scraping for both OLX and Otodom');
 
     const [olxResult, otodomResult] = await Promise.allSettled([
-      this.scrapeOlxWithWorkers(olxMaxPages, sortOrder, 2),
-      this.scrapeOtodomWithWorkers(otodomMaxPages, 2),
+      this.scrapeOlxWithWorkers(olxMaxPages, sortOrder, 1),
+      this.scrapeOtodomWithWorkers(otodomMaxPages, 1),
     ]);
 
     const results = {
