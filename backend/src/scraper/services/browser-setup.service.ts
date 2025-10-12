@@ -13,7 +13,7 @@ export class BrowserSetupService implements OnModuleDestroy {
   ];
 
   private activeBrowsers = new Set<Browser>();
-  private readonly MAX_CONCURRENT_BROWSERS = 2;
+  private readonly MAX_CONCURRENT_BROWSERS = 10;
   private browserQueue: Array<{
     resolve: (browser: Browser) => void;
     reject: (error: Error) => void;

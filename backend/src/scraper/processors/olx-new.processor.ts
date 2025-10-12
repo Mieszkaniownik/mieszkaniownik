@@ -3,7 +3,9 @@ import { Logger, OnModuleInit } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { ScraperProcessor } from '../scraper.processor';
 
-@Processor('olx-new')
+@Processor('olx-new', {
+  concurrency: 5,
+})
 export class OlxNewProcessor extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(OlxNewProcessor.name);
 

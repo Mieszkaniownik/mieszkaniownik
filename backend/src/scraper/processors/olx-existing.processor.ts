@@ -3,7 +3,9 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { ScraperProcessor } from '../scraper.processor';
 
-@Processor('olx-existing')
+@Processor('olx-existing', {
+  concurrency: 3,
+})
 export class OlxExistingProcessor extends WorkerHost {
   private readonly logger = new Logger(OlxExistingProcessor.name);
 

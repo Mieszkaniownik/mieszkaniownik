@@ -3,7 +3,9 @@ import { Logger, OnModuleInit } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { ScraperProcessor } from '../scraper.processor';
 
-@Processor('otodom-new')
+@Processor('otodom-new', {
+  concurrency: 5,
+})
 export class OtodomNewProcessor extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(OtodomNewProcessor.name);
 
