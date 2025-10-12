@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import * as puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
 
 @Injectable()
-export class BrowserSetupService {
+export class BrowserSetupService implements OnModuleDestroy {
   private readonly logger = new Logger(BrowserSetupService.name);
   private readonly userAgents = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
@@ -12,26 +12,123 @@ export class BrowserSetupService {
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.0',
   ];
 
+  private activeBrowsers = new Set<Browser>();
+  private readonly MAX_CONCURRENT_BROWSERS = 2;
+  private browserQueue: Array<{
+    resolve: (browser: Browser) => void;
+    reject: (error: Error) => void;
+  }> = [];
+
+  async onModuleDestroy() {
+    this.logger.log('Closing all active browsers...');
+    await Promise.all(
+      Array.from(this.activeBrowsers).map(async (browser) => {
+        try {
+          await browser.close();
+        } catch (error) {
+          this.logger.warn(`Error closing browser: ${error}`);
+        }
+      }),
+    );
+    this.activeBrowsers.clear();
+  }
+
   async createBrowser(): Promise<Browser> {
-    return puppeteer.launch({
-      headless: true,
-      executablePath: '/usr/bin/chromium',
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--window-size=1920,1080',
-        '--disable-blink-features=AutomationControlled',
-        '--no-first-run',
-        '--disable-background-networking',
-        '--disable-component-extensions-with-background-pages',
-        '--disable-default-apps',
-        '--disable-extensions',
-        '--disable-ipc-flooding-protection',
-      ],
-    });
+    if (this.activeBrowsers.size >= this.MAX_CONCURRENT_BROWSERS) {
+      this.logger.log(
+        `Browser limit reached (${this.activeBrowsers.size}/${this.MAX_CONCURRENT_BROWSERS}). Queuing request...`,
+      );
+      await new Promise<Browser>((resolve, reject) => {
+        this.browserQueue.push({ resolve, reject });
+      });
+    }
+
+    try {
+      const browser = await puppeteer.launch({
+        headless: true,
+        executablePath: '/usr/bin/chromium',
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-gpu',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor',
+          '--window-size=1920,1080',
+          '--disable-blink-features=AutomationControlled',
+          '--no-first-run',
+          '--disable-background-networking',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-default-apps',
+          '--disable-extensions',
+          '--disable-ipc-flooding-protection',
+
+          '--disable-dev-shm-usage',
+          '--disable-software-rasterizer',
+          '--single-process',
+          '--no-zygote',
+          '--disable-accelerated-2d-canvas',
+          '--memory-pressure-off',
+          '--disable-notifications',
+          '--disable-speech-api',
+          '--disable-audio-output',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-breakpad',
+          '--disable-component-update',
+          '--disable-domain-reliability',
+          '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+          '--disable-hang-monitor',
+          '--disable-prompt-on-repost',
+          '--disable-sync',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-default-browser-check',
+          '--safebrowsing-disable-auto-update',
+        ],
+
+        protocolTimeout: 60000,
+      });
+
+      this.activeBrowsers.add(browser);
+      this.logger.log(
+        `Browser created. Active browsers: ${this.activeBrowsers.size}/${this.MAX_CONCURRENT_BROWSERS}`,
+      );
+
+      browser.on('disconnected', () => {
+        this.activeBrowsers.delete(browser);
+        this.processQueue();
+      });
+
+      return browser;
+    } catch (error) {
+      this.logger.error(`Failed to create browser: ${error}`);
+      throw error;
+    }
+  }
+
+  private processQueue() {
+    if (
+      this.browserQueue.length > 0 &&
+      this.activeBrowsers.size < this.MAX_CONCURRENT_BROWSERS
+    ) {
+      const next = this.browserQueue.shift();
+      if (next) {
+        this.createBrowser().then(next.resolve).catch(next.reject);
+      }
+    }
+  }
+
+  async closeBrowser(browser: Browser): Promise<void> {
+    try {
+      await browser.close();
+      this.activeBrowsers.delete(browser);
+      this.logger.log(
+        `Browser closed. Active browsers: ${this.activeBrowsers.size}/${this.MAX_CONCURRENT_BROWSERS}`,
+      );
+      this.processQueue();
+    } catch (error) {
+      this.logger.warn(`Error closing browser: ${error}`);
+    }
   }
 
   async setupPage(browser: Browser): Promise<Page> {

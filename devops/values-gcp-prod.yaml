@@ -1,0 +1,352 @@
+global:
+  imageRegistry: 'gcr.io/mieszkaniownik-prod'
+
+backend:
+  enabled: true
+  name: backend
+  replicaCount: 2
+
+  image:
+    repository: gcr.io/mieszkaniownik-prod/mieszkaniownik-backend
+    tag: 'latest'
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 5001
+    targetPort: 5001
+    name: http
+
+  env:
+    NODE_ENV: production
+    PORT: '5001'
+
+  envFrom:
+    - secretRef:
+        name: backend-secrets
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
+
+  healthChecks:
+    enabled: true
+    livenessProbe:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 60
+      periodSeconds: 30
+      timeoutSeconds: 10
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /health
+        port: http
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+frontend:
+  enabled: true
+  name: frontend
+  replicaCount: 2
+
+  image:
+    repository: gcr.io/mieszkaniownik-prod/mieszkaniownik-frontend
+    tag: 'latest'
+    pullPolicy: Always
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+
+  env:
+    NODE_ENV: production
+
+  resources:
+    requests:
+      cpu: 200m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+  healthChecks:
+    enabled: true
+    livenessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /
+        port: 80
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: '7-alpine'
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 6379
+    targetPort: 6379
+
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClass: 'standard-rwo'
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+database:
+  postgresql:
+    enabled: false
+  custom:
+    enabled: false
+
+databaseJobs:
+  migrate:
+    enabled: true
+    image:
+      repository: gcr.io/mieszkaniownik-prod/mieszkaniownik-backend
+      tag: 'latest'
+      pullPolicy: Always
+    backoffLimit: 5
+    restartPolicy: Never
+    envFrom:
+      - secretRef:
+          name: backend-secrets
+
+  seed:
+    enabled: true
+    image:
+      repository: gcr.io/mieszkaniownik-prod/mieszkaniownik-backend
+      tag: 'latest'
+      pullPolicy: Always
+    backoffLimit: 5
+    restartPolicy: Never
+    envFrom:
+      - secretRef:
+          name: backend-secrets
+
+secrets:
+  postgresql:
+    existingSecret: 'postgres-credentials'
+    userKey: 'username'
+    passwordKey: 'password'
+
+ingress:
+  enabled: true
+  className: 'nginx'
+  annotations:
+    cert-manager.io/cluster-issuer: 'letsencrypt-prod'
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/force-ssl-redirect: 'true'
+
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+
+    nginx.ingress.kubernetes.io/limit-rps: '100'
+    nginx.ingress.kubernetes.io/limit-connections: '10'
+
+    nginx.ingress.kubernetes.io/proxy-body-size: '10m'
+
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: '60'
+    nginx.ingress.kubernetes.io/proxy-send-timeout: '60'
+    nginx.ingress.kubernetes.io/proxy-read-timeout: '60'
+
+    nginx.ingress.kubernetes.io/enable-cors: 'true'
+    nginx.ingress.kubernetes.io/cors-allow-origin: 'https://mieszkaniownik.pl,https://www.mieszkaniownik.pl'
+    nginx.ingress.kubernetes.io/cors-allow-methods: 'GET, POST, PUT, DELETE, OPTIONS'
+    nginx.ingress.kubernetes.io/cors-allow-credentials: 'true'
+
+  hosts:
+    - host: mieszkaniownik.pl
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+    - host: www.mieszkaniownik.pl
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+
+  tls:
+    - secretName: mieszkaniownik-tls
+      hosts:
+        - mieszkaniownik.pl
+        - www.mieszkaniownik.pl
+
+autoscaling:
+  backend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+
+  frontend:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+          - type: Percent
+            value: 50
+            periodSeconds: 60
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+          - type: Percent
+            value: 100
+            periodSeconds: 30
+
+serviceAccount:
+  create: true
+  annotations:
+    iam.gke.io/gcp-service-account: mieszkaniownik-sa@mieszkaniownik-prod.iam.gserviceaccount.com
+  name: 'mieszkaniownik-sa'
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: false
+
+networkPolicy:
+  enabled: false
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: 5001
+        - protocol: TCP
+          port: 80
+  egress:
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 5432
+        - protocol: TCP
+          port: 6379
+        - protocol: TCP
+          port: 443
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: false
+    interval: 30s
+    scrapeTimeout: 10s
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app
+                operator: In
+                values:
+                  - backend
+                  - frontend
+          topologyKey: kubernetes.io/hostname
+
+nodeSelector: {}
+
+tolerations: []
+
+priorityClassName: ''
+
+podLabels:
+  app.kubernetes.io/part-of: mieszkaniownik
+  environment: production
+  managed-by: helm
+
+podAnnotations:
+  prometheus.io/scrape: 'true'
+  prometheus.io/port: '5001'
+  prometheus.io/path: '/metrics'

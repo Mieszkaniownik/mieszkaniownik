@@ -160,7 +160,7 @@ export class ScraperProcessor extends WorkerHost {
         await this.processOlxOffer(page, currentUrl, isNew);
       }
 
-      await browser.close();
+      await this.browserSetup.closeBrowser(browser);
     } catch (error) {
       this.logger.error(
         `Error processing offer ${job.data.url}: ${error instanceof Error ? error.message : 'Unknown error'}`,

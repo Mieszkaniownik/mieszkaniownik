@@ -54,6 +54,7 @@ export class ScraperThreadManagerService {
     this.logger.log('Starting dedicated workers for existing offers...');
 
     const olxExistingPromise = this.runEnhancedOlxWorker(false);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const otodomExistingPromise = this.runEnhancedOtodomWorker(false);
 
@@ -64,6 +65,7 @@ export class ScraperThreadManagerService {
     this.logger.log('Starting dedicated workers for new offers...');
 
     const olxNewPromise = this.runEnhancedOlxWorker(true);
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     const otodomNewPromise = this.runEnhancedOtodomWorker(true);
 
@@ -257,7 +259,7 @@ export class ScraperThreadManagerService {
               source: 'olx',
               error: 'Worker timeout',
             });
-          }, 60000); // 60 second timeout
+          }, 30000);
 
           worker.on('message', (result: WorkerResult) => {
             clearTimeout(timeout);
@@ -423,7 +425,7 @@ export class ScraperThreadManagerService {
               source: 'otodom',
               error: 'Worker timeout',
             });
-          }, 60000); // 60 second timeout
+          }, 30000);
 
           worker.on('message', (result: WorkerResult) => {
             clearTimeout(timeout);
