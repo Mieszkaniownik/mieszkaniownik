@@ -42,8 +42,8 @@ export class HeatmapQueryDto {
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  @Max(10000)
-  limit?: number = 5000;
+  @Max(20000)
+  limit?: number = 10000;
 
   @IsOptional()
   @Type(() => Number)

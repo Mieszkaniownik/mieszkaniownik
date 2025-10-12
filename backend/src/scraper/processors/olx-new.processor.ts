@@ -1,19 +1,31 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Logger, OnModuleInit } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { ScraperProcessor } from '../scraper.processor';
 
 @Processor('olx-new')
-export class OlxNewProcessor extends WorkerHost {
+export class OlxNewProcessor extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(OlxNewProcessor.name);
 
   constructor(private readonly scraperProcessor: ScraperProcessor) {
     super();
   }
 
-  async process(job: Job<{ url: string; isNew?: boolean }>): Promise<void> {
-    this.logger.log(`Processing NEW OLX offer: ${job.data.url}`);
+  onModuleInit() {
+    this.logger.log('OlxNewProcessor initialized and ready to process jobs!');
+  }
 
-    return await this.scraperProcessor.process(job);
+  async process(job: Job<{ url: string; isNew?: boolean }>): Promise<void> {
+    this.logger.log(
+      `Processing NEW OLX offer: ${job.data.url} (Job ID: ${job.id})`,
+    );
+
+    try {
+      await this.scraperProcessor.process(job);
+      this.logger.log(`Successfully processed OLX offer: ${job.data.url}`);
+    } catch (error) {
+      this.logger.error(`Failed to process OLX offer: ${job.data.url}`, error);
+      throw error;
+    }
   }
 }

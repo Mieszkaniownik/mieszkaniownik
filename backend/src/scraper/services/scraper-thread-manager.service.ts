@@ -97,7 +97,12 @@ export class ScraperThreadManagerService {
           const queue = isNewOffersOnly
             ? this.olxNewQueue
             : this.olxExistingQueue;
-          result.offers.forEach((offerUrl) => {
+
+          this.logger.log(
+            `📤 Queueing ${result.offers.length} OLX ${workerType} offers for processing...`,
+          );
+
+          result.offers.forEach((offerUrl, index) => {
             queue
               .add(
                 'processOffer',
@@ -108,9 +113,14 @@ export class ScraperThreadManagerService {
                   backoff: { type: 'exponential', delay: 2000 },
                 },
               )
+              .then((job) => {
+                this.logger.debug(
+                  `✅ Queued OLX offer ${index + 1}/${result.offers.length}: ${offerUrl} (Job ID: ${job.id})`,
+                );
+              })
               .catch((err) => {
                 this.logger.error(
-                  `Failed to queue OLX offer: ${offerUrl}`,
+                  `❌ Failed to queue OLX offer: ${offerUrl}`,
                   err,
                 );
               });
