@@ -22,18 +22,48 @@ import { HeatmapModule } from '../heatmap/heatmap.module';
     ScheduleModule.forRoot(),
     BullModule.registerQueue({
       name: 'scraper',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 1000,
+      },
     }),
     BullModule.registerQueue({
       name: 'olx-existing',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 1000,
+      },
     }),
     BullModule.registerQueue({
       name: 'otodom-existing',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 1000,
+      },
     }),
     BullModule.registerQueue({
       name: 'olx-new',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 1000,
+      },
     }),
     BullModule.registerQueue({
       name: 'otodom-new',
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 1000,
+      },
     }),
     DatabaseModule,
     AuthModule,

@@ -4,7 +4,8 @@ import { Job } from 'bullmq';
 import { ScraperProcessor } from '../scraper.processor';
 
 @Processor('otodom-existing', {
-  concurrency: 3,
+  concurrency: 2,
+  lockDuration: 120000,
 })
 export class OtodomExistingProcessor extends WorkerHost {
   private readonly logger = new Logger(OtodomExistingProcessor.name);
