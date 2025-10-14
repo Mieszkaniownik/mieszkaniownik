@@ -1,6 +1,6 @@
 # Mieszkaniownik Architecture
 
-![Mieszkaniownik](Mieszkaniownik.png)
+![Mieszkaniownik](mieszkaniownik.png)
 
 ## System Overview
 
