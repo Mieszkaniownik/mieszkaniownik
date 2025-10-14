@@ -1,58 +1,48 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import useUser from '../context/UserContext/useUser'
-import { API_BASE_URL } from '../api/api'
-import Loading from '../components/Loading'
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import useUser from "../context/UserContext/useUser";
+import { getUserData } from "../api/api";
+import Loading from "../components/Loading";
 
 function AuthCallbackPage() {
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
-  const { login } = useUser()
-  const [error, setError] = useState(null)
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { login } = useUser();
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    handleCallback()
-  }, [])
+    handleCallback();
+  }, []);
 
   async function handleCallback() {
-    const token = searchParams.get('token')
-    const errorParam = searchParams.get('error')
+    const token = searchParams.get("token");
+    const errorParam = searchParams.get("error");
 
     if (errorParam) {
-      setError('Nie udało się zalogować przez Google. Spróbuj ponownie.')
-      setTimeout(() => navigate('/login'), 3000)
-      return
+      setError("Nie udało się zalogować przez Google. Spróbuj ponownie.");
+      setTimeout(() => navigate("/login"), 3000);
+      return;
     }
 
     if (!token) {
-      setError('Brak tokenu autoryzacji.')
-      setTimeout(() => navigate('/login'), 3000)
-      return
+      setError("Brak tokenu autoryzacji.");
+      setTimeout(() => navigate("/login"), 3000);
+      return;
     }
 
+    window.sessionStorage.setItem("mieszkaniownik:token", token);
+
     try {
-      localStorage.setItem('token', token)
+      const userData = getUserData();
+      if (!userData)
+        throw new Error("Nie udało się pobrać danych użytkownika.");
+      login(userData);
 
-      const response = await fetch(`${API_BASE_URL}/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch user data')
-      }
-
-      const data = await response.json()
-
-      localStorage.setItem('user', JSON.stringify(data))
-      login(data)
-
-      navigate('/dashboard', { replace: true })
+      navigate("/dashboard", { replace: true });
     } catch (err) {
-      console.error('Error handling Google callback:', err)
-      setError('Wystąpił błąd podczas logowania. Spróbuj ponownie.')
-      setTimeout(() => navigate('/login'), 3000)
+      console.error("Error handling Google callback:", err);
+      setError("Wystąpił błąd podczas logowania. Spróbuj ponownie.");
+      setTimeout(() => navigate("/login"), 3000);
     }
   }
 
@@ -97,7 +87,7 @@ function AuthCallbackPage() {
         )}
       </div>
     </div>
-  )
+  );
 }
 
-export default AuthCallbackPage
+export default AuthCallbackPage;

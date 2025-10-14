@@ -1,52 +1,39 @@
-import { createContext, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { createContext, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { getUserData } from "../../api/api";
 
-const UserContext = createContext(null)
+const UserContext = createContext(null);
 
 function UserProvider({ children }) {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const storedUser = localStorage.getItem('user')
+    const token = window.sessionStorage.getItem("mieszkaniownik:token");
+    if (!token) return;
 
-    if (token && storedUser) {
-      try {
-        setUser(JSON.parse(storedUser))
-      } catch (err) {
-        console.error('Failed to parse stored user:', err)
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+    async function fetchUser() {
+      const userData = await getUserData();
+      if (userData) {
+        setUser(userData);
       }
     }
 
-    setLoading(false)
-  }, [])
-
-  function login(userData) {
-    setUser(userData)
-    localStorage.setItem('user', JSON.stringify(userData))
-  }
+    fetchUser();
+  }, []);
 
   function logout() {
-    setUser(null)
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    navigate('/')
-  }
-
-  if (loading) {
-    return null
+    window.sessionStorage.removeItem("mieszkaniownik:token");
+    setUser(null);
+    navigate("/dashboard");
   }
 
   return (
-    <UserContext.Provider value={{ user, login, logout }}>
+    <UserContext.Provider value={{ user, login: setUser, logout }}>
       {children}
     </UserContext.Provider>
-  )
+  );
 }
 
-export default UserProvider
-export { UserContext }
+export default UserProvider;
+export { UserContext };

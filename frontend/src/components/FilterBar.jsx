@@ -22,33 +22,7 @@ function FilterBar({
   const activeFiltersCount = activeFilters.length
 
   return (
-    <div className="space-y-6">
-      {sortOptions.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <ArrowUpDown size={20} className="text-gray-600" />
-              <h2 className="font-semibold text-gray-900">Sortuj</h2>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {sortOptions.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => onSortChange(option.value)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                    sortBy === option.value
-                      ? 'bg-blue-600 text-white shadow-sm'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
+    <div className="space-y-6 mb-6">
       {(showSearch || filters.length > 0) && (
         <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -133,6 +107,32 @@ function FilterBar({
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {sortOptions.length > 0 && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+          <div className="flex flex-col items-start md:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <ArrowUpDown size={20} className="text-gray-600" />
+              <h2 className="font-semibold text-gray-900">Sortuj</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {sortOptions.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => onSortChange(option.value)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    sortBy === option.value
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>

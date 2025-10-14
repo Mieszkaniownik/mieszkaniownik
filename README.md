@@ -20,8 +20,8 @@ graph LR
         end
 
         subgraph WORKERS["Worker Threads"]
-            OW[OLX Worker<br/>Puppeteer + Stealth]
-            OTW[Otodom Worker<br/>Puppeteer + Stealth]
+            OW[OLX Worker<br/>Puppeteer]
+            OTW[Otodom Worker<br/>Puppeteer]
         end
 
         subgraph QUEUES["BullMQ Queues"]
@@ -43,6 +43,7 @@ graph LR
             AI[AI Address<br/>Extractor]
             BS[Browser<br/>Setup]
             PP[Parameter<br/>Parser]
+            OA[Otodom<br/>Auth Service]
         end
 
         subgraph CORE["Core Modules"]
@@ -83,9 +84,10 @@ graph LR
 
     SYS_OEP & SYS_ONP & SYS_OTEP & SYS_OTNP --> SYS_SP
 
-    SYS_SP --> AI & BS & PP
+    SYS_SP --> AI & BS & PP & OA
 
     AI --> GOOGLE
+    OA -.->|auth cookies| OTODOM
     BS -.->|retry| OLX & OTODOM
     SYS_SP --> NOMINATIM
     SYS_SP --> DM
@@ -138,7 +140,7 @@ sequenceDiagram
             SP-->>DB: Save (isNew: false)
         end
 
-    Note over User,DB: Phase 2: Continuous - New Offers (Every Minute)
+    Note over User,DB: Phase 2: Continuous - New Offers (Every Second)
         SS->>STM: startNewOffersWorkers()
 
         par High Priority Scraping
@@ -186,6 +188,7 @@ graph LR
         PUPPETEER[Puppeteer<br/>Headless Chrome]
         STEALTH[Stealth Plugin<br/>Anti-detection]
         WORKER[Worker Threads<br/>Parallelism]
+        OTODOM_AUTH[Otodom Auth<br/>Cookie Management]
     end
 
     subgraph AI["AI & Geocoding"]
@@ -211,10 +214,9 @@ graph LR
     end
 
     %% Connections
-    NEST --> PRISMA & BULLMQ & PUPPETEER & WORKER & GOOGLE_AI & NOMINATIM & SCHEDULER & JWT & OAUTH & PASSPORT & NODEMAILER & DISCORD & GMAPS & HEATMAP
+    NEST --> PRISMA & BULLMQ & PUPPETEER & WORKER & OTODOM_AUTH & GOOGLE_AI & NOMINATIM & SCHEDULER & JWT & OAUTH & PASSPORT & NODEMAILER & DISCORD & GMAPS & HEATMAP
     PRISMA --> PG
     BULLMQ --> REDIS
-    PUPPETEER --> STEALTH
 ```
 
 ## Database Schema & Data Flow
@@ -334,8 +336,8 @@ flowchart TB
     OLX_PROC --> MERGE_EXIST{ }
     OTDM_PROC --> MERGE_EXIST
 
-    MERGE_EXIST --> CRON_MIN([Every Minute<br/>Cron Job])
-    CRON_MIN --> NEW_INIT[Start New Workers]
+    MERGE_EXIST --> CRON_SEC([Every Second<br/>Cron Job])
+    CRON_SEC --> NEW_INIT[Start New Workers]
     NEW_INIT --> SPAWN_NEW[Spawn 2 Threads]
 
     SPAWN_NEW --> SPLIT_NEW{ }
@@ -356,8 +358,11 @@ flowchart TB
 
     MERGE_NEW --> MAIN_PROC[ScraperProcessor<br/>Main Logic]
 
-    MAIN_PROC --> BROWSER[Browser Setup<br/>Puppeteer + Stealth]
-    BROWSER --> PARSE[Parse Parameters<br/>Extract Data]
+    MAIN_PROC --> BROWSER[Browser Setup<br/>Puppeteer]
+    BROWSER --> AUTH{Otodom?}
+    AUTH -->|Yes| OTODOM_AUTH[Apply Auth<br/>Cookies]
+    AUTH -->|No| PARSE
+    OTODOM_AUTH --> PARSE[Parse Parameters<br/>Extract Data]
     PARSE --> AI[AI Extraction<br/>Google Gemini]
     AI --> GEO[Geocoding<br/>Nominatim OSM]
     GEO --> SAVE[Save to DB<br/>PostgreSQL]
@@ -371,7 +376,7 @@ flowchart TB
     CRON_HOUR([Every Hour<br/>Full Refresh])
     CRON_HOUR --> FULL[Full Scrape<br/>scrapeWithBothThreads]
     FULL --> SPAWN_EXIST
-    END --> CRON_MIN
+    END --> CRON_SEC
 ```
 
 ## Worker Thread Implementation Details
@@ -393,13 +398,13 @@ graph TB
             OTNQ[(otodom-new<br/>P:1)]
         end
 
-        subgraph PROC["Queue Processors"]
+        subgraph PROCESSORS["Queue Processors"]
             direction TB
             OEP[OlxExisting]
             ONP[OlxNew]
             OTEP[OtodomExisting]
             OTNP[OtodomNew]
-            SP[ScraperProcessor<br/>Core Logic]
+            SP[ScraperProcessor<br/>Core Logic<br/><i>Shared by all processors</i>]
 
             OEP --> SP
             ONP --> SP

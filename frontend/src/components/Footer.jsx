@@ -11,6 +11,14 @@ function Footer() {
             className="hover:text-gray-300 transition-colors inline-block underline-offset-4 hover:underline"
           >
             @moshenetsb
+          </a>{" "}
+          <a
+            href="https://github.com/wsparcie"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-gray-300 transition-colors inline-block underline-offset-4 hover:underline"
+          >
+            @wsparcie
           </a>
         </span>
         <span>
@@ -43,12 +51,12 @@ function Footer() {
         <span>
           PM:{" "}
           <a
-            href="#"
+            href="https://github.com/StudentSkunek"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-gray-300 transition-colors inline-block underline-offset-4 hover:underline"
           >
-            @#
+            @StudentSkunek
           </a>
         </span>
       </div>

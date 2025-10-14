@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Param,
+  Delete,
   UseGuards,
   Request,
   ParseIntPipe,
@@ -141,5 +142,25 @@ export class MatchController {
   })
   processOffer(@Param('offerId', ParseIntPipe) offerId: number) {
     return this.matchService.processNewOffer(offerId);
+  }
+
+  @Delete(':id')
+  @ApiOperation({
+    summary: 'Delete a match',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Match deleted successfully',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Match not found',
+  })
+  remove(@Request() req: UserRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.matchService.remove(id, Number(req.user.id));
   }
 }

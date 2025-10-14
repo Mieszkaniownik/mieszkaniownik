@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import * as puppeteer from 'puppeteer';
 import type { Browser, Page } from 'puppeteer';
+import { OtodomAuthService } from './otodom-auth.service';
 
 @Injectable()
 export class BrowserSetupService implements OnModuleDestroy {
@@ -13,11 +14,10 @@ export class BrowserSetupService implements OnModuleDestroy {
   ];
 
   private activeBrowsers = new Set<Browser>();
-  private readonly MAX_CONCURRENT_BROWSERS = 8;
-  private browserQueue: Array<{
-    resolve: (browser: Browser) => void;
-    reject: (error: Error) => void;
-  }> = [];
+  private readonly MAX_CONCURRENT_BROWSERS = 3;
+  private browserQueue: Array<() => void> = [];
+
+  constructor(private readonly otodomAuth: OtodomAuthService) {}
 
   async onModuleDestroy() {
     this.logger.log('Closing all active browsers...');
@@ -34,12 +34,12 @@ export class BrowserSetupService implements OnModuleDestroy {
   }
 
   async createBrowser(): Promise<Browser> {
-    if (this.activeBrowsers.size >= this.MAX_CONCURRENT_BROWSERS) {
+    while (this.activeBrowsers.size >= this.MAX_CONCURRENT_BROWSERS) {
       this.logger.log(
-        `Browser limit reached (${this.activeBrowsers.size}/${this.MAX_CONCURRENT_BROWSERS}). Queuing request...`,
+        `Browser limit reached (${this.activeBrowsers.size}/${this.MAX_CONCURRENT_BROWSERS}). Waiting...`,
       );
-      await new Promise<Browser>((resolve, reject) => {
-        this.browserQueue.push({ resolve, reject });
+      await new Promise<void>((resolve) => {
+        this.browserQueue.push(resolve);
       });
     }
 
@@ -113,7 +113,7 @@ export class BrowserSetupService implements OnModuleDestroy {
     ) {
       const next = this.browserQueue.shift();
       if (next) {
-        this.createBrowser().then(next.resolve).catch(next.reject);
+        next();
       }
     }
   }
@@ -131,7 +131,7 @@ export class BrowserSetupService implements OnModuleDestroy {
     }
   }
 
-  async setupPage(browser: Browser): Promise<Page> {
+  async setupPage(browser: Browser, forOtodom = false): Promise<Page> {
     const page = await browser.newPage();
     const userAgent =
       this.userAgents[Math.floor(Math.random() * this.userAgents.length)];
@@ -172,6 +172,41 @@ export class BrowserSetupService implements OnModuleDestroy {
         writable: true,
       });
     });
+
+    if (forOtodom && this.otodomAuth.isAuthConfigured()) {
+      try {
+        this.logger.log(
+          '🔐 Attempting to apply Otodom authentication cookies...',
+        );
+        const authenticated = await this.otodomAuth.applyCookiesToPage(page);
+        if (authenticated) {
+          this.logger.log(
+            '✅ Successfully applied Otodom authentication cookies to page',
+          );
+        } else {
+          this.logger.warn(
+            '⚠️  Otodom authentication cookies not available or expired',
+          );
+          this.logger.warn(
+            '💡 Page will load without authentication - may receive limited content',
+          );
+        }
+      } catch (error) {
+        this.logger.error(
+          `❌ Failed to apply Otodom auth cookies: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+        this.logger.warn(
+          '💡 Continuing without authentication - CloudFront may block or limit content',
+        );
+      }
+    } else if (forOtodom) {
+      this.logger.warn(
+        '⚠️  Otodom authentication requested but not configured',
+      );
+      this.logger.warn(
+        '💡 Set OTODOM_EMAIL and OTODOM_PASSWORD to enable authentication',
+      );
+    }
 
     await new Promise((resolve) =>
       setTimeout(resolve, Math.random() * 3000 + 2000),

@@ -445,4 +445,23 @@ export class MatchService {
       };
     }
   }
+
+  async remove(id: number, userId: number) {
+    const match = await this.findOne(id, userId);
+
+    if (!match) {
+      throw new NotFoundException(`Match with ID ${id} not found`);
+    }
+
+    await this.databaseService.match.delete({
+      where: { id },
+    });
+
+    this.logger.log(`Match ${id} deleted by user ${userId}`);
+
+    return {
+      success: true,
+      message: `Match ${id} has been deleted`,
+    };
+  }
 }

@@ -8,6 +8,7 @@ import type { AddressExtractionResult } from './dto/address-extraction.interface
 import { aiAddressExtractorService } from './services/ai-address-extractor.service';
 import { ScraperThreadManagerService } from './services/scraper-thread-manager.service';
 import { BrowserSetupService } from './services/browser-setup.service';
+import { OtodomAuthService } from './services/otodom-auth.service';
 import { DatabaseService } from '../database/database.service';
 
 export enum SortOrder {
@@ -30,6 +31,7 @@ export class ScraperService implements OnModuleInit {
     private readonly threadManager: ScraperThreadManagerService,
     private readonly databaseService: DatabaseService,
     private readonly browserSetup: BrowserSetupService,
+    private readonly otodomAuth: OtodomAuthService,
   ) {}
 
   onModuleInit() {
@@ -229,7 +231,7 @@ export class ScraperService implements OnModuleInit {
       this.logger.debug(`Otodom URL: ${url}`);
 
       browser = await this.createBrowser();
-      const page = await this.setupPage(browser);
+      const page = await this.setupPage(browser, true);
 
       await page.goto(url, {
         waitUntil: 'networkidle0',
@@ -350,8 +352,8 @@ export class ScraperService implements OnModuleInit {
     return this.browserSetup.createBrowser();
   }
 
-  private async setupPage(browser: Browser) {
-    return this.browserSetup.setupPage(browser);
+  private async setupPage(browser: Browser, forOtodom = false) {
+    return this.browserSetup.setupPage(browser, forOtodom);
   }
 
   private async queueOffer(

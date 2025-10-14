@@ -1,96 +1,156 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import useUser from "../context/UserContext/useUser";
-import { apiPost } from "../api/api";
-import { ArrowLeft, CirclePlus } from "lucide-react";
-import Button from "../components/Button";
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import Header from '../components/Header'
+import Footer from '../components/Footer'
+import useUser from '../context/UserContext/useUser'
+import { apiGet, apiPatch } from '../api/api'
+import { ArrowLeft, CirclePlus, Loader2 } from 'lucide-react'
+import Button from '../components/Button'
 
-function CreateAlertPage() {
-  const navigate = useNavigate();
-  const { user } = useUser();
-  const [loading, setLoading] = useState(false);
-  const [keywords, setKeywords] = useState([]);
-  const [keywordInput, setKeywordInput] = useState("");
+function EditAlertPage() {
+  const navigate = useNavigate()
+  const { id } = useParams()
+  const { user } = useUser()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [alert, setAlert] = useState(null)
+  const [keywords, setKeywords] = useState([])
+  const [keywordInput, setKeywordInput] = useState('')
+
+  const fetchAlert = useCallback(async () => {
+    try {
+      setLoading(true)
+      const data = await apiGet(`/alerts/${id}`)
+      setAlert(data)
+      if (data.keywords) {
+        setKeywords(data.keywords)
+      }
+    } catch (err) {
+      alert('Błąd: Nie udało się pobrać alertu')
+      console.error(err)
+      navigate('/alerts')
+    } finally {
+      setLoading(false)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, navigate])
 
   useEffect(() => {
-    if (!user && !sessionStorage.getItem("mieszkaniownik:token")) {
-      navigate("/login", { replace: true });
+    if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
+      navigate('/login', { replace: true })
+      return
     }
-  }, [user, navigate]);
+    fetchAlert()
+  }, [user, navigate, fetchAlert])
 
   async function handleSubmit(e) {
-    e.preventDefault();
-    setLoading(true);
+    e.preventDefault()
+    setSaving(true)
 
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.target)
 
     const alertData = {
-      userId: user.id,
-      name: formData.get("name"),
-      city: formData.get("city"),
-      district: formData.get("district") || undefined,
-      minPrice: formData.get("minPrice")
-        ? parseFloat(formData.get("minPrice"))
+      name: formData.get('name'),
+      city: formData.get('city'),
+      district: formData.get('district') || undefined,
+      minPrice: formData.get('minPrice')
+        ? parseFloat(formData.get('minPrice'))
         : undefined,
-      maxPrice: formData.get("maxPrice")
-        ? parseFloat(formData.get("maxPrice"))
+      maxPrice: formData.get('maxPrice')
+        ? parseFloat(formData.get('maxPrice'))
         : undefined,
-      minFootage: formData.get("minFootage")
-        ? parseFloat(formData.get("minFootage"))
+      minFootage: formData.get('minFootage')
+        ? parseFloat(formData.get('minFootage'))
         : undefined,
-      maxFootage: formData.get("maxFootage")
-        ? parseFloat(formData.get("maxFootage"))
+      maxFootage: formData.get('maxFootage')
+        ? parseFloat(formData.get('maxFootage'))
         : undefined,
-      minRooms: formData.get("minRooms")
-        ? parseInt(formData.get("minRooms"))
+      minRooms: formData.get('minRooms')
+        ? parseInt(formData.get('minRooms'))
         : undefined,
-      maxRooms: formData.get("maxRooms")
-        ? parseInt(formData.get("maxRooms"))
+      maxRooms: formData.get('maxRooms')
+        ? parseInt(formData.get('maxRooms'))
         : undefined,
-      minFloor: formData.get("minFloor")
-        ? parseInt(formData.get("minFloor"))
+      minFloor: formData.get('minFloor')
+        ? parseInt(formData.get('minFloor'))
         : undefined,
-      maxFloor: formData.get("maxFloor")
-        ? parseInt(formData.get("maxFloor"))
+      maxFloor: formData.get('maxFloor')
+        ? parseInt(formData.get('maxFloor'))
         : undefined,
-      ownerType: formData.get("ownerType") || undefined,
-      buildingType: formData.get("buildingType") || undefined,
-      parkingType: formData.get("parkingType") || undefined,
-      elevator: formData.get("elevator") === "true" ? true : undefined,
-      furniture: formData.get("furniture") === "true" ? true : undefined,
-      pets: formData.get("pets") === "true" ? true : undefined,
+      ownerType: formData.get('ownerType') || undefined,
+      buildingType: formData.get('buildingType') || undefined,
+      parkingType: formData.get('parkingType') || undefined,
+      elevator: formData.get('elevator') === 'true' ? true : undefined,
+      furniture: formData.get('furniture') === 'true' ? true : undefined,
+      pets: formData.get('pets') === 'true' ? true : undefined,
       keywords: keywords.length > 0 ? keywords : undefined,
-      discordWebhook: formData.get("discordWebhook") || undefined,
-      notificationMethod: formData.get("notificationMethod") || "EMAIL",
-    };
+      discordWebhook: formData.get('discordWebhook') || undefined,
+      notificationMethod: formData.get('notificationMethod') || 'EMAIL',
+    }
 
     Object.keys(alertData).forEach(
       (key) => alertData[key] === undefined && delete alertData[key]
-    );
+    )
 
     try {
-      await apiPost("/alerts", alertData);
-
-      navigate("/alerts");
+      await apiPatch(`/alerts/${id}`, alertData)
+      navigate(`/matches?alert=${id}`)
     } catch (err) {
-      alert("Błąd: Nie udało się utworzyć alertu");
-      console.error(err);
+      alert('Błąd: Nie udało się zaktualizować alertu')
+      console.error(err)
     } finally {
-      setLoading(false);
+      setSaving(false)
     }
   }
 
   function addKeyword() {
     if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {
-      setKeywords([...keywords, keywordInput.trim()]);
-      setKeywordInput("");
+      setKeywords([...keywords, keywordInput.trim()])
+      setKeywordInput('')
     }
   }
 
   function removeKeyword(keyword) {
-    setKeywords(keywords.filter((k) => k !== keyword));
+    setKeywords(keywords.filter((k) => k !== keyword))
+  }
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
+          <div className="max-w-4xl w-full">
+            <div className="flex items-center justify-center h-64">
+              <Loader2 size={48} className="animate-spin text-blue-600" />
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    )
+  }
+
+  if (!alert) {
+    return (
+      <>
+        <Header />
+        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
+          <div className="max-w-4xl w-full">
+            <button
+              onClick={() => navigate('/alerts')}
+              className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition mb-6"
+            >
+              <ArrowLeft size={20} />
+              Powrót do alertów
+            </button>
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              Alert nie został znaleziony
+            </div>
+          </div>
+        </main>
+        <Footer />
+      </>
+    )
   }
 
   return (
@@ -99,7 +159,7 @@ function CreateAlertPage() {
       <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
         <div className="max-w-4xl w-full">
           <button
-            onClick={() => navigate("/alerts")}
+            onClick={() => navigate(`/alerts`)}
             className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition mb-6"
           >
             <ArrowLeft size={20} />
@@ -111,10 +171,10 @@ function CreateAlertPage() {
             className="w-full bg-white border border-gray-200 rounded-lg px-4 md:px-6 py-6 shadow-sm"
           >
             <h1 className="text-xl md:text-2xl font-bold text-blue-950 mb-2">
-              Utwórz nowy alert
+              Edytuj alert
             </h1>
             <p className="text-gray-600 mb-4 text-sm md:text-base">
-              Nie przegap nowych ofert - wypełnij formularz
+              Zmień parametry swojego alertu
             </p>
 
             <div className="w-full grid grid-cols-1 gap-4">
@@ -130,6 +190,7 @@ function CreateAlertPage() {
                   id="name"
                   name="name"
                   required
+                  defaultValue={alert.name}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                   placeholder="np. Kawalerka w centrum"
                 />
@@ -148,6 +209,7 @@ function CreateAlertPage() {
                     id="city"
                     name="city"
                     required
+                    defaultValue={alert.city}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="np. Wrocław"
                   />
@@ -163,6 +225,7 @@ function CreateAlertPage() {
                     type="text"
                     id="district"
                     name="district"
+                    defaultValue={alert.district || ''}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="np. Stare Miasto"
                   />
@@ -179,6 +242,7 @@ function CreateAlertPage() {
                     name="minPrice"
                     min="0"
                     step="0.01"
+                    defaultValue={alert.minPrice || ''}
                     className="rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
                   />
@@ -187,6 +251,7 @@ function CreateAlertPage() {
                     name="maxPrice"
                     min="0"
                     step="0.01"
+                    defaultValue={alert.maxPrice || ''}
                     className="rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Do"
                   />
@@ -203,6 +268,7 @@ function CreateAlertPage() {
                     name="minFootage"
                     min="0"
                     step="0.01"
+                    defaultValue={alert.minFootage || ''}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
                   />
@@ -211,6 +277,7 @@ function CreateAlertPage() {
                     name="maxFootage"
                     min="0"
                     step="0.01"
+                    defaultValue={alert.maxFootage || ''}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Do"
                   />
@@ -227,6 +294,7 @@ function CreateAlertPage() {
                     name="minRooms"
                     min="1"
                     max="20"
+                    defaultValue={alert.minRooms || ''}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
                   />
@@ -235,6 +303,7 @@ function CreateAlertPage() {
                     name="maxRooms"
                     min="1"
                     max="20"
+                    defaultValue={alert.maxRooms || ''}
                     className="w-full rounded-lg border border-gray-300 p-3"
                     placeholder="Do"
                   />
@@ -251,6 +320,11 @@ function CreateAlertPage() {
                     name="minFloor"
                     min="0"
                     max="50"
+                    defaultValue={
+                      alert.minFloor !== null && alert.minFloor !== undefined
+                        ? alert.minFloor
+                        : ''
+                    }
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
                   />
@@ -259,6 +333,7 @@ function CreateAlertPage() {
                     name="maxFloor"
                     min="0"
                     max="50"
+                    defaultValue={alert.maxFloor || ''}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Do"
                   />
@@ -275,6 +350,7 @@ function CreateAlertPage() {
                 <select
                   id="ownerType"
                   name="ownerType"
+                  defaultValue={alert.ownerType || ''}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="">Dowolny</option>
@@ -294,6 +370,7 @@ function CreateAlertPage() {
                 <select
                   id="buildingType"
                   name="buildingType"
+                  defaultValue={alert.buildingType || ''}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="">Dowolny</option>
@@ -317,6 +394,7 @@ function CreateAlertPage() {
                 <select
                   id="parkingType"
                   name="parkingType"
+                  defaultValue={alert.parkingType || ''}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="">Dowolny</option>
@@ -342,6 +420,13 @@ function CreateAlertPage() {
                     <select
                       id="elevator"
                       name="elevator"
+                      defaultValue={
+                        alert.elevator === null
+                          ? ''
+                          : alert.elevator
+                          ? 'true'
+                          : 'false'
+                      }
                       className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     >
                       <option value="">Dowolne</option>
@@ -359,6 +444,13 @@ function CreateAlertPage() {
                     <select
                       id="furniture"
                       name="furniture"
+                      defaultValue={
+                        alert.furniture === null
+                          ? ''
+                          : alert.furniture
+                          ? 'true'
+                          : 'false'
+                      }
                       className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     >
                       <option value="">Dowolne</option>
@@ -376,6 +468,9 @@ function CreateAlertPage() {
                     <select
                       id="pets"
                       name="pets"
+                      defaultValue={
+                        alert.pets === null ? '' : alert.pets ? 'true' : 'false'
+                      }
                       className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     >
                       <option value="">Dowolne</option>
@@ -401,7 +496,7 @@ function CreateAlertPage() {
                     value={keywordInput}
                     onChange={(e) => setKeywordInput(e.target.value)}
                     onKeyPress={(e) =>
-                      e.key === "Enter" && (e.preventDefault(), addKeyword())
+                      e.key === 'Enter' && (e.preventDefault(), addKeyword())
                     }
                     className="min-w-0 flex-1 rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="np. balkon, blisko metra"
@@ -446,6 +541,7 @@ function CreateAlertPage() {
                 <select
                   id="notificationMethod"
                   name="notificationMethod"
+                  defaultValue={alert.notificationMethod || 'EMAIL'}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="EMAIL">Email</option>
@@ -465,18 +561,19 @@ function CreateAlertPage() {
                   type="url"
                   id="discordWebhook"
                   name="discordWebhook"
+                  defaultValue={alert.discordWebhook || ''}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                   placeholder="https://discord.com/api/webhooks/..."
                 />
               </div>
 
               <div className="flex gap-4 pt-2">
-                <Button type="submit" loading={loading} className="flex-1">
-                  Utwórz <span className="hidden sm:inline">alert</span>
+                <Button type="submit" loading={saving} className="flex-1">
+                  Zapisz <span className="hidden sm:inline">zmiany</span>
                 </Button>
                 <Button
                   type="button"
-                  onClick={() => navigate("/alerts")}
+                  onClick={() => navigate(`/alerts`)}
                   variant="secondary"
                 >
                   Anuluj
@@ -488,7 +585,7 @@ function CreateAlertPage() {
       </main>
       <Footer />
     </>
-  );
+  )
 }
 
-export default CreateAlertPage;
+export default EditAlertPage

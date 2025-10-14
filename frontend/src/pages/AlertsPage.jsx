@@ -5,22 +5,18 @@ import Footer from '../components/Footer'
 import FilterBar from '../components/FilterBar'
 import useUser from '../context/UserContext/useUser'
 import useFilters from '../hooks/useFilters'
-import { API_BASE_URL } from '../api/api'
+import { apiGet, apiPatch, apiDelete } from '../api/api'
 import {
-  Plus,
   Edit,
   Trash2,
   ToggleLeft,
   ToggleRight,
-  Eye,
   Heart,
   Loader2,
-  Bell,
-  TrendingUp,
   Filter,
+  CirclePlus,
 } from 'lucide-react'
 import CardSkeleton from '../components/CardSkeleton'
-import StatsSkeleton from '../components/StatsSkeleton'
 import {
   ALERT_SORT_OPTIONS,
   ALERT_STATUS_OPTIONS,
@@ -54,8 +50,6 @@ function AlertsPage() {
 
   const fetchAlerts = useCallback(async () => {
     try {
-      const token = localStorage.getItem('token')
-
       const params = new URLSearchParams()
 
       if (filters.status !== 'ALL') {
@@ -74,22 +68,11 @@ function AlertsPage() {
         params.append('sortBy', filters.sortBy)
       }
 
-      const alertsUrl = `${API_BASE_URL}/alerts?${params.toString()}`
+      const data = await apiGet(`/alerts?${params.toString()}`)
 
-      const res = await fetch(alertsUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!res.ok) {
-        throw new Error('Nie udało się pobrać alertów')
-      }
-
-      const data = await res.json()
       setAlerts(data)
     } catch (err) {
-      setError(err.message)
+      setError('Błąd: Nie udało się pobrać alertów')
       console.error(err)
     } finally {
       setLoading(false)
@@ -97,7 +80,7 @@ function AlertsPage() {
   }, [filters])
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
       navigate('/login', { replace: true })
       return
     }
@@ -107,21 +90,11 @@ function AlertsPage() {
   async function handleToggleStatus(alertId) {
     setActionLoading((prev) => ({ ...prev, [alertId]: 'toggle' }))
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE_URL}/alerts/${alertId}/toggle`, {
-        method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!res.ok) {
-        throw new Error('Nie udało się zmienić statusu alertu')
-      }
+      await apiPatch(`/alerts/${alertId}/toggle`)
 
       fetchAlerts()
     } catch (err) {
-      alert('Błąd: ' + err.message)
+      alert('Błąd: Nie udało się zmienić statusu alertu')
       console.error(err)
     } finally {
       setActionLoading((prev) => {
@@ -139,21 +112,11 @@ function AlertsPage() {
 
     setActionLoading((prev) => ({ ...prev, [alertId]: 'delete' }))
     try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE_URL}/alerts/${alertId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!res.ok) {
-        throw new Error('Nie udało się usunąć alertu')
-      }
+      await apiDelete(`/alerts/${alertId}`)
 
       fetchAlerts()
     } catch (err) {
-      alert('Błąd: ' + err.message)
+      alert('Błąd: Nie udało się usunąć alertu')
       console.error(err)
     } finally {
       setActionLoading((prev) => {
@@ -181,30 +144,11 @@ function AlertsPage() {
     },
   })
 
-  const stats = {
-    total: alerts.length,
-    active: alerts.filter((a) => a.status === 'ACTIVE').length,
-    paused: alerts.filter((a) => a.status === 'PAUSED').length,
-    totalMatches: alerts.reduce(
-      (sum, alert) => sum + (alert._count?.matches || 0),
-      0
-    ),
-    avgMatches:
-      alerts.length > 0
-        ? (
-            alerts.reduce(
-              (sum, alert) => sum + (alert._count?.matches || 0),
-              0
-            ) / alerts.length
-          ).toFixed(1)
-        : 0,
-  }
-
   if (loading) {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8">
+        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
           <div className="max-w-6xl w-full">
             <div className="flex justify-between items-center mb-8">
               <div>
@@ -215,12 +159,6 @@ function AlertsPage() {
                   Zarządzaj swoimi alertami mieszkaniowymi
                 </p>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[1, 2, 3, 4].map((i) => (
-                <StatsSkeleton key={i} />
-              ))}
             </div>
 
             <div className="grid gap-6">
@@ -238,7 +176,7 @@ function AlertsPage() {
   return (
     <>
       <Header />
-      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8">
+      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
         <div className="max-w-6xl w-full">
           <div className="flex justify-between items-center mb-8">
             <div>
@@ -251,59 +189,10 @@ function AlertsPage() {
               onClick={() => navigate('/alerts/new')}
               className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
             >
-              <Plus size={20} />
+              <CirclePlus size={20} />
               Nowy Alert
             </button>
           </div>
-
-          {alerts.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-              <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <Bell className="text-blue-600" size={24} />
-                  </div>
-                </div>
-                <p className="text-gray-600 text-sm mb-1">Wszystkie alerty</p>
-                <p className="text-3xl font-bold text-blue-950">
-                  {stats.total}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  {stats.active} aktywnych, {stats.paused} wstrzymanych
-                </p>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-purple-100 rounded-lg">
-                    <Heart className="text-purple-600" size={24} />
-                  </div>
-                </div>
-                <p className="text-gray-600 text-sm mb-1">
-                  Wszystkie dopasowania
-                </p>
-                <p className="text-3xl font-bold text-blue-950">
-                  {stats.totalMatches}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">
-                  Suma dopasowań z wszystkich alertów
-                </p>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="p-3 bg-green-100 rounded-lg">
-                    <TrendingUp className="text-green-600" size={24} />
-                  </div>
-                </div>
-                <p className="text-gray-600 text-sm mb-1">Średnia dopasowań</p>
-                <p className="text-3xl font-bold text-blue-950">
-                  {stats.avgMatches}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">Na alert</p>
-              </div>
-            </div>
-          )}
 
           {alerts.length > 0 && (
             <FilterBar
@@ -455,12 +344,6 @@ function AlertsPage() {
                             </p>
                           </div>
                         )}
-                        <div>
-                          <p className="text-sm text-gray-600">Dopasowania</p>
-                          <p className="font-medium">
-                            {alert._count?.matches || 0}
-                          </p>
-                        </div>
                       </div>
 
                       {alert.keywords && alert.keywords.length > 0 && (
@@ -481,62 +364,70 @@ function AlertsPage() {
                         </div>
                       )}
 
-                      <p className="text-sm text-gray-500 mt-4">
-                        Utworzono:{' '}
-                        {new Date(alert.createdAt).toLocaleDateString('pl-PL')}
-                      </p>
+                      <div className="flex items-center gap-4 mt-4 text-sm text-gray-500">
+                        <span>
+                          Utworzono dnia:{' '}
+                          {new Date(alert.createdAt).toLocaleDateString(
+                            'pl-PL'
+                          )}
+                        </span>
+                        <span className="text-gray-300">•</span>
+                        <span>
+                          Dopasowania:{' '}
+                          <span className="font-semibold text-blue-950">
+                            {alert._count?.matches || 0}
+                          </span>
+                        </span>
+                      </div>
                     </div>
 
-                    <div className="flex gap-2 ml-4">
+                    <div className="mt-auto space-y-2">
                       <button
                         onClick={() => navigate(`/matches?alert=${alert.id}`)}
-                        className="p-2 text-purple-600 hover:bg-purple-50 rounded transition"
-                        title="Zobacz dopasowania"
+                        className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-full hover:bg-blue-700 transition-colors"
                       >
-                        <Heart size={20} />
+                        <Heart size={16} />
+                        <span className="text-sm font-medium">
+                          Zobacz dopasowania
+                        </span>
                       </button>
-                      <button
-                        onClick={() => navigate(`/alerts/${alert.id}`)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded transition"
-                        title="Zobacz szczegóły"
-                      >
-                        <Eye size={20} />
-                      </button>
-                      <button
-                        onClick={() => navigate(`/alerts/${alert.id}/edit`)}
-                        className="p-2 text-gray-600 hover:bg-gray-100 rounded transition"
-                        title="Edytuj"
-                      >
-                        <Edit size={20} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(alert.id)}
-                        disabled={actionLoading[alert.id] === 'toggle'}
-                        className="p-2 text-yellow-600 hover:bg-yellow-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        title={
-                          alert.status === 'ACTIVE' ? 'Wstrzymaj' : 'Aktywuj'
-                        }
-                      >
-                        {actionLoading[alert.id] === 'toggle' ? (
-                          <Loader2 size={20} className="animate-spin" />
-                        ) : alert.status === 'ACTIVE' ? (
-                          <ToggleRight size={20} />
-                        ) : (
-                          <ToggleLeft size={20} />
-                        )}
-                      </button>
-                      <button
-                        onClick={() => handleDelete(alert.id, alert.name)}
-                        disabled={actionLoading[alert.id] === 'delete'}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Usuń"
-                      >
-                        {actionLoading[alert.id] === 'delete' ? (
-                          <Loader2 size={20} className="animate-spin" />
-                        ) : (
-                          <Trash2 size={20} />
-                        )}
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => navigate(`/alerts/${alert.id}/edit`)}
+                          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-blue-600 text-blue-600 rounded-full hover:bg-blue-50 transition-colors text-sm font-medium"
+                        >
+                          <Edit size={14} />
+                          Edytuj
+                        </button>
+                        <button
+                          onClick={() => handleToggleStatus(alert.id)}
+                          disabled={actionLoading[alert.id] === 'toggle'}
+                          className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-600 rounded-full hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          title={
+                            alert.status === 'ACTIVE' ? 'Wstrzymaj' : 'Aktywuj'
+                          }
+                        >
+                          {actionLoading[alert.id] === 'toggle' ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : alert.status === 'ACTIVE' ? (
+                            <ToggleRight size={14} />
+                          ) : (
+                            <ToggleLeft size={14} />
+                          )}
+                        </button>
+                        <button
+                          onClick={() => handleDelete(alert.id, alert.name)}
+                          disabled={actionLoading[alert.id] === 'delete'}
+                          className="flex items-center justify-center gap-2 px-3 py-2 border border-red-600 text-red-600 rounded-full hover:bg-red-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Usuń"
+                        >
+                          {actionLoading[alert.id] === 'delete' ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

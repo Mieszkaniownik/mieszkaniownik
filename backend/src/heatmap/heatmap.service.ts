@@ -13,6 +13,16 @@ export class HeatmapService {
 
   constructor(private readonly databaseService: DatabaseService) {}
 
+  private calculateViewsPerDay(views: number, createdAt: Date): number {
+    const now = new Date();
+    const offerAgeInMs = now.getTime() - createdAt.getTime();
+    const offerAgeInDays = offerAgeInMs / (1000 * 60 * 60 * 24);
+
+    const daysForCalculation = Math.max(offerAgeInDays, 0.1);
+
+    return views / daysForCalculation;
+  }
+
   async generateHeatmapData(
     query: HeatmapQuery = {},
     userId?: number,
@@ -51,14 +61,25 @@ export class HeatmapService {
         avgViews: 0,
         minViews: 0,
         totalOffers: 0,
+        avgViewsPerDay: 0,
+        maxViewsPerDay: 0,
+        minViewsPerDay: 0,
       };
     }
 
     const viewsCounts = offers.map((offer) => offer.views);
-    const maxViews = Math.max(...viewsCounts);
     const avgViews =
       viewsCounts.reduce((sum, val) => sum + val, 0) / viewsCounts.length;
     const minViews = Math.min(...viewsCounts);
+
+    const viewsPerDayList = offers.map((offer) =>
+      this.calculateViewsPerDay(offer.views, offer.createdAt),
+    );
+    const maxViewsPerDay = Math.max(...viewsPerDayList);
+    const minViewsPerDay = Math.min(...viewsPerDayList);
+    const avgViewsPerDay =
+      viewsPerDayList.reduce((sum, val) => sum + val, 0) /
+      viewsPerDayList.length;
 
     const offersWithPricePerSqm = offers.filter(
       (offer) =>
@@ -146,9 +167,14 @@ export class HeatmapService {
 
     for (const [index, offer] of offers.entries()) {
       if (offer.latitude !== null && offer.longitude !== null) {
+        const viewsPerDay = this.calculateViewsPerDay(
+          offer.views,
+          offer.createdAt,
+        );
+
         const intensity =
-          maxViews > minViews
-            ? (offer.views - minViews) / (maxViews - minViews)
+          maxViewsPerDay > minViewsPerDay
+            ? (viewsPerDay - minViewsPerDay) / (maxViewsPerDay - minViewsPerDay)
             : 1;
 
         const pricePerSqm =
@@ -169,6 +195,7 @@ export class HeatmapService {
           footage: offer.footage ? Number(offer.footage) : undefined,
           pricePerSqm: pricePerSqm,
           offerDensity: offerDensity,
+          viewsPerDay: viewsPerDay,
           address:
             offer.street && offer.streetNumber
               ? `${offer.street} ${offer.streetNumber}`
@@ -202,6 +229,9 @@ export class HeatmapService {
       maxFootage,
       minFootage,
       avgFootage,
+      avgViewsPerDay,
+      maxViewsPerDay,
+      minViewsPerDay,
       bounds: points.length > 0 ? bounds : undefined,
     };
   }
@@ -343,6 +373,8 @@ export class HeatmapService {
             createdAt: true,
             available: true,
             footage: true,
+            images: true,
+            link: true,
           },
         },
       },
@@ -353,6 +385,12 @@ export class HeatmapService {
     });
 
     this.logger.log(`Found ${matches.length} matches for user ${userId}`);
+
+    // Create a map of offerId -> matchId for quick lookup
+    const offerIdToMatchId = new Map<number, number>();
+    matches.forEach((match) => {
+      offerIdToMatchId.set(match.offer.id, match.id);
+    });
 
     const validOffers = matches
       .map((match) => match.offer)
@@ -369,14 +407,25 @@ export class HeatmapService {
         avgViews: 0,
         minViews: 0,
         totalOffers: 0,
+        avgViewsPerDay: 0,
+        maxViewsPerDay: 0,
+        minViewsPerDay: 0,
       };
     }
 
     const viewsCounts = validOffers.map((offer) => offer.views);
-    const maxViews = Math.max(...viewsCounts);
     const avgViews =
       viewsCounts.reduce((sum, val) => sum + val, 0) / viewsCounts.length;
     const minViews = Math.min(...viewsCounts);
+
+    const viewsPerDayList = validOffers.map((offer) =>
+      this.calculateViewsPerDay(offer.views, offer.createdAt),
+    );
+    const maxViewsPerDay = Math.max(...viewsPerDayList);
+    const minViewsPerDay = Math.min(...viewsPerDayList);
+    const avgViewsPerDay =
+      viewsPerDayList.reduce((sum, val) => sum + val, 0) /
+      viewsPerDayList.length;
 
     const offersWithPricePerSqm = validOffers.filter(
       (offer) =>
@@ -466,9 +515,14 @@ export class HeatmapService {
 
     for (const [index, offer] of validOffers.entries()) {
       if (offer.latitude !== null && offer.longitude !== null) {
+        const viewsPerDay = this.calculateViewsPerDay(
+          offer.views,
+          offer.createdAt,
+        );
+
         const intensity =
-          maxViews > minViews
-            ? (offer.views - minViews) / (maxViews - minViews)
+          maxViewsPerDay > minViewsPerDay
+            ? (viewsPerDay - minViewsPerDay) / (maxViewsPerDay - minViewsPerDay)
             : 1;
 
         const pricePerSqm =
@@ -484,15 +538,19 @@ export class HeatmapService {
           intensity: Math.max(0.1, intensity),
           weight: offer.views,
           offerId: offer.id,
+          matchId: offerIdToMatchId.get(offer.id),
           title: offer.title,
           price: offer.price ? Number(offer.price) : undefined,
           footage: offer.footage ? Number(offer.footage) : undefined,
           pricePerSqm: pricePerSqm,
           offerDensity: offerDensity,
+          viewsPerDay: viewsPerDay,
           address:
             offer.street && offer.streetNumber
               ? `${offer.street} ${offer.streetNumber}`
               : offer.district || offer.city,
+          images: offer.images || [],
+          link: offer.link,
         };
 
         points.push(point);
@@ -522,6 +580,9 @@ export class HeatmapService {
       maxFootage,
       minFootage,
       avgFootage,
+      avgViewsPerDay,
+      maxViewsPerDay,
+      minViewsPerDay,
       bounds: points.length > 0 ? bounds : undefined,
     };
   }

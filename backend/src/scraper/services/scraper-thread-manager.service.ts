@@ -3,6 +3,8 @@ import { Worker } from 'worker_threads';
 import * as path from 'path';
 import type { Queue } from 'bullmq';
 import { InjectQueue } from '@nestjs/bullmq';
+import { OtodomAuthService } from './otodom-auth.service';
+import type { Cookie } from 'puppeteer';
 
 interface WorkerData {
   pageNum: number;
@@ -10,6 +12,7 @@ interface WorkerData {
   baseUrl: string;
   userAgents: string[];
   isNewOffersOnly?: boolean;
+  cookies?: Cookie[];
 }
 
 interface WorkerResult {
@@ -48,6 +51,7 @@ export class ScraperThreadManagerService {
     @InjectQueue('otodom-existing') private readonly otodomExistingQueue: Queue,
     @InjectQueue('olx-new') private readonly olxNewQueue: Queue,
     @InjectQueue('otodom-new') private readonly otodomNewQueue: Queue,
+    private readonly otodomAuth: OtodomAuthService,
   ) {}
 
   public async startExistingOffersWorkers(): Promise<void> {
@@ -99,7 +103,7 @@ export class ScraperThreadManagerService {
             : this.olxExistingQueue;
 
           this.logger.log(
-            `📤 Queueing ${result.offers.length} OLX ${workerType} offers for processing...`,
+            `Queueing ${result.offers.length} OLX ${workerType} offers for processing...`,
           );
 
           result.offers.forEach((offerUrl, index) => {
@@ -115,12 +119,12 @@ export class ScraperThreadManagerService {
               )
               .then((job) => {
                 this.logger.debug(
-                  `✅ Queued OLX offer ${index + 1}/${result.offers.length}: ${offerUrl} (Job ID: ${job.id})`,
+                  `Queued OLX offer ${index + 1}/${result.offers.length}: ${offerUrl} (Job ID: ${job.id})`,
                 );
               })
               .catch((err) => {
                 this.logger.error(
-                  `❌ Failed to queue OLX offer: ${offerUrl}`,
+                  `Failed to queue OLX offer: ${offerUrl}`,
                   err,
                 );
               });
@@ -152,13 +156,30 @@ export class ScraperThreadManagerService {
     const workerType = isNewOffersOnly ? 'NEW' : 'EXISTING';
     this.logger.log(`Starting Otodom worker for ${workerType} offers`);
 
+    let cookies: Cookie[] | null = null;
+    if (this.otodomAuth.isAuthConfigured()) {
+      try {
+        cookies = await this.otodomAuth.getCookiesForWorker();
+        if (cookies) {
+          this.logger.log(
+            `Obtained ${cookies.length} Otodom auth cookies for worker`,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Failed to get Otodom auth cookies: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
+    }
+
     return new Promise((resolve, reject) => {
-      const workerData = {
+      const workerData: WorkerData = {
         pageNum: 1,
         sortOrder: 'created_at:desc',
         baseUrl: this.otodomBaseUrl,
         userAgents: this.userAgents,
         isNewOffersOnly,
+        cookies: cookies || undefined,
       };
 
       const workerPath = path.join(
@@ -395,6 +416,22 @@ export class ScraperThreadManagerService {
       `Starting multi-threaded Otodom scraping with ${maxConcurrentWorkers} workers`,
     );
 
+    let cookies: Cookie[] | null = null;
+    if (this.otodomAuth.isAuthConfigured()) {
+      try {
+        cookies = await this.otodomAuth.getCookiesForWorker();
+        if (cookies) {
+          this.logger.log(
+            `Obtained ${cookies.length} Otodom auth cookies for workers`,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Failed to get Otodom auth cookies: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        );
+      }
+    }
+
     let currentPage = 1;
     let totalOffers = 0;
     let pagesProcessed = 0;
@@ -409,6 +446,7 @@ export class ScraperThreadManagerService {
             baseUrl: this.otodomBaseUrl,
             userAgents: this.userAgents,
             isNewOffersOnly: false,
+            cookies: cookies || undefined,
           };
 
           const workerPath = path.join(

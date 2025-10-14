@@ -1,7 +1,8 @@
-import { Controller, Post, SetMetadata, Body } from '@nestjs/common';
+import { Controller, Post, Get, SetMetadata, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ScraperService, SortOrder } from './scraper.service';
 import { ScrapeRequestDto } from './dto/scrape-request.dto';
+import { OtodomAuthService } from './services/otodom-auth.service';
 
 export const IS_PUBLIC_KEY = 'isPublic';
 export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
@@ -9,7 +10,10 @@ export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 @ApiTags('scraper')
 @Controller('scraper')
 export class ScraperController {
-  constructor(private readonly scraperService: ScraperService) {}
+  constructor(
+    private readonly scraperService: ScraperService,
+    private readonly otodomAuth: OtodomAuthService,
+  ) {}
 
   @Post('start')
   @ApiOperation({
@@ -187,6 +191,80 @@ export class ScraperController {
       if (error instanceof Error) {
         console.error('Error details:', error.message, error.stack);
       }
+      throw error;
+    }
+  }
+
+  @Get('otodom-auth/status')
+  @ApiOperation({
+    summary: 'Check Otodom authentication status',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Authentication status retrieved',
+  })
+  async getOtodomAuthStatus() {
+    try {
+      const status = await this.otodomAuth.getAuthStatus();
+      return {
+        ...status,
+        message: status.authenticated
+          ? 'Otodom authentication is active'
+          : status.configured
+            ? 'Otodom authentication configured but not active'
+            : 'Otodom authentication not configured',
+      };
+    } catch (error) {
+      console.error('Error getting auth status:', error);
+      throw error;
+    }
+  }
+
+  @Post('otodom-auth/refresh')
+  @ApiOperation({
+    summary: 'Force refresh Otodom authentication',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Authentication refreshed successfully',
+  })
+  @ApiResponse({
+    status: 500,
+    description: 'Authentication refresh failed',
+  })
+  async refreshOtodomAuth() {
+    try {
+      const auth = await this.otodomAuth.forceReauth();
+      return {
+        success: !!auth,
+        message: auth
+          ? 'Otodom authentication refreshed successfully'
+          : 'Failed to refresh Otodom authentication',
+        cookieCount: auth?.cookies.length,
+      };
+    } catch (error) {
+      console.error('Error refreshing auth:', error);
+      throw error;
+    }
+  }
+
+  @Post('otodom-auth/clear')
+  @ApiOperation({
+    summary: 'Clear cached Otodom authentication',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Authentication cache cleared',
+  })
+  async clearOtodomAuth() {
+    try {
+      await this.otodomAuth.clearAuth();
+      return {
+        success: true,
+        message: 'Otodom authentication cache cleared',
+      };
+    } catch (error) {
+      console.error('Error clearing auth:', error);
       throw error;
     }
   }

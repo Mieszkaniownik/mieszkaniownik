@@ -1,8 +1,3 @@
-/**
- * Standardized configuration for filtering and sorting across the app
- */
-
-// Alert Sort Options
 export const ALERT_SORT_OPTIONS = [
   { value: 'newest', label: 'Najnowsze' },
   { value: 'oldest', label: 'Najstarsze' },
@@ -10,14 +5,12 @@ export const ALERT_SORT_OPTIONS = [
   { value: 'name', label: 'Nazwa (A-Z)' },
 ]
 
-// Alert Status Options
 export const ALERT_STATUS_OPTIONS = [
   { value: 'ALL', label: 'Wszystkie' },
   { value: 'ACTIVE', label: 'Aktywne' },
   { value: 'PAUSED', label: 'Wstrzymane' },
 ]
 
-// Match Sort Options
 export const MATCH_SORT_OPTIONS = [
   { value: 'newest', label: 'Najnowsze' },
   { value: 'oldest', label: 'Najstarsze' },
@@ -29,7 +22,6 @@ export const MATCH_SORT_OPTIONS = [
   { value: 'score-low', label: 'Dopasowanie: Najgorsze' },
 ]
 
-// Default values
 export const DEFAULT_SORT = {
   ALERTS: 'newest',
   MATCHES: 'newest',
@@ -41,7 +33,6 @@ export const DEFAULT_FILTER = {
   ALERT: 'all',
 }
 
-// Helper functions
 export const buildQueryParams = (filters) => {
   const params = new URLSearchParams()
 

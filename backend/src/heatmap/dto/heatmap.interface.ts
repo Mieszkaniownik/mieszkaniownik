@@ -7,9 +7,13 @@ export interface HeatmapPoint {
   price?: number;
   address?: string;
   offerId: number;
+  matchId?: number;
   footage?: number;
   pricePerSqm?: number;
   offerDensity?: number;
+  viewsPerDay?: number;
+  images?: string[];
+  link?: string;
 }
 
 export interface HeatmapData {
@@ -26,6 +30,9 @@ export interface HeatmapData {
   maxFootage?: number;
   minFootage?: number;
   avgFootage?: number;
+  avgViewsPerDay?: number;
+  maxViewsPerDay?: number;
+  minViewsPerDay?: number;
   bounds?: {
     north: number;
     south: number;

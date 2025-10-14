@@ -1,6 +1,6 @@
 import { isMainThread, parentPort, workerData } from 'worker_threads';
 import * as puppeteer from 'puppeteer';
-import type { Browser } from 'puppeteer';
+import type { Browser, Cookie } from 'puppeteer';
 
 export interface ScraperWorkerData {
   pageNum: number;
@@ -8,6 +8,7 @@ export interface ScraperWorkerData {
   baseUrl: string;
   userAgents: string[];
   isNewOffersOnly?: boolean;
+  cookies?: Cookie[];
 }
 
 export interface ScraperWorkerResult {
@@ -91,14 +92,38 @@ if (!isMainThread && parentPort) {
         });
       });
 
+      if (data.cookies && data.cookies.length > 0) {
+        try {
+          await page.setCookie(...data.cookies);
+          console.log(
+            `Otodom Worker: Applied ${data.cookies.length} authentication cookies`,
+          );
+        } catch (cookieError) {
+          console.warn(
+            `Otodom Worker: Failed to apply cookies: ${cookieError instanceof Error ? cookieError.message : 'Unknown error'}`,
+          );
+        }
+      }
+
       await new Promise((resolve) =>
         setTimeout(resolve, Math.random() * 3000 + 2000),
       );
 
-      await page.goto(url, {
-        waitUntil: 'networkidle0',
-        timeout: 30000,
-      });
+      try {
+        await page.goto(url, {
+          waitUntil: 'networkidle0',
+          timeout: 60000,
+        });
+      } catch (navError) {
+        console.warn(
+          `Otodom Worker: Navigation with networkidle0 failed, retrying with domcontentloaded: ${navError instanceof Error ? navError.message : 'Unknown error'}`,
+        );
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: 60000,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
 
       await page.waitForSelector(
         'article[data-sentry-component="AdvertCard"]',
@@ -160,7 +185,15 @@ if (!isMainThread && parentPort) {
       };
     } finally {
       if (browser) {
-        await browser.close();
+        try {
+          await browser.close();
+          console.log(`Otodom Worker: Browser closed for page ${data.pageNum}`);
+        } catch (closeError) {
+          console.error(
+            `Otodom Worker: Error closing browser for page ${data.pageNum}:`,
+            closeError,
+          );
+        }
       }
     }
   }
@@ -168,6 +201,7 @@ if (!isMainThread && parentPort) {
   scrapeOtodomPage()
     .then((result) => {
       parentPort!.postMessage(result);
+      process.exit(0);
     })
     .catch((error) => {
       parentPort!.postMessage({
@@ -178,5 +212,6 @@ if (!isMainThread && parentPort) {
         pageNum: data.pageNum,
         source: 'otodom',
       });
+      process.exit(1);
     });
 }

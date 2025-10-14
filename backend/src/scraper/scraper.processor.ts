@@ -36,6 +36,7 @@ type OtodomScrapedData = ScrapedData & {
   footage: string | null;
   address: string | null;
   contact: string | null;
+  views: number;
 };
 
 @Processor('scraper')
@@ -123,14 +124,55 @@ export class ScraperProcessor extends WorkerHost {
       this.logger.log(`PROCESSOR: Detected OLX URL - ${job.data.url}`);
     }
 
-    try {
-      const browser = await this.browserSetup.createBrowser();
-      const page = await this.browserSetup.setupPage(browser);
+    let browser: puppeteer.Browser | null = null;
+    let page: puppeteer.Page | null = null;
 
-      await page.goto(job.data.url, {
-        waitUntil: 'networkidle0',
-        timeout: 30000,
-      });
+    try {
+      browser = await this.browserSetup.createBrowser();
+      const isOtodom = job.data.url.includes('otodom.pl');
+
+      if (isOtodom) {
+        this.logger.log(
+          `Setting up page with Otodom authentication for: ${job.data.url}`,
+        );
+      }
+
+      page = await this.browserSetup.setupPage(browser, isOtodom);
+
+      const navigationTimeout = isOtodom ? 60000 : 30000;
+
+      try {
+        await page.goto(job.data.url, {
+          waitUntil: 'networkidle0',
+          timeout: navigationTimeout,
+        });
+      } catch (navError) {
+        this.logger.warn(
+          `Navigation with networkidle0 failed, retrying with domcontentloaded: ${navError instanceof Error ? navError.message : 'Unknown error'}`,
+        );
+        await page.goto(job.data.url, {
+          waitUntil: 'domcontentloaded',
+          timeout: navigationTimeout,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+
+      const pageContent = await page.content();
+      if (
+        pageContent.includes('403 ERROR') ||
+        pageContent.includes('Request blocked') ||
+        pageContent.includes('cloudfront')
+      ) {
+        this.logger.error(
+          `CloudFront blocked request for ${job.data.url}. Authentication cookies applied but bot detection triggered.`,
+        );
+        this.logger.warn(
+          `This is a known limitation - Otodom's WAF blocks automated browsers even with valid authentication.`,
+        );
+        throw new Error(
+          'CloudFront 403: Request blocked by Otodom bot protection',
+        );
+      }
 
       await page.evaluate(() => {
         return new Promise<void>((resolve) => {
@@ -159,13 +201,33 @@ export class ScraperProcessor extends WorkerHost {
       } else {
         await this.processOlxOffer(page, currentUrl, isNew);
       }
-
-      await this.browserSetup.closeBrowser(browser);
     } catch (error) {
       this.logger.error(
         `Error processing offer ${job.data.url}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       );
       throw error;
+    } finally {
+      try {
+        if (page) {
+          await page.close();
+          this.logger.debug(`Closed page for ${job.data.url}`);
+        }
+      } catch (closeError) {
+        this.logger.warn(
+          `Failed to close page for ${job.data.url}: ${closeError instanceof Error ? closeError.message : 'Unknown error'}`,
+        );
+      }
+
+      try {
+        if (browser) {
+          await this.browserSetup.closeBrowser(browser);
+          this.logger.debug(`Closed browser for ${job.data.url}`);
+        }
+      } catch (closeError) {
+        this.logger.warn(
+          `Failed to close browser for ${job.data.url}: ${closeError instanceof Error ? closeError.message : 'Unknown error'}`,
+        );
+      }
     }
   }
 
@@ -175,6 +237,55 @@ export class ScraperProcessor extends WorkerHost {
     isNew = false,
   ) {
     try {
+      const pageDebug = await page.evaluate(() => {
+        const allSpans = Array.from(document.querySelectorAll('span'));
+        const spanInfo = allSpans
+          .filter(
+            (span) =>
+              span.textContent?.includes('października') ||
+              span.textContent?.includes('dzisiaj') ||
+              span.textContent?.includes('wczoraj'),
+          )
+          .map((span) => ({
+            text: span.textContent?.trim(),
+            testId: span.getAttribute('data-testid'),
+            dataCy: span.getAttribute('data-cy'),
+            className: span.className,
+            parentClass: span.parentElement?.className,
+          }));
+
+        return {
+          foundSpans: spanInfo.length,
+          spans: spanInfo,
+          hasTestIdElement: !!document.querySelector(
+            '[data-testid="ad-posted-at"]',
+          ),
+          bodySnippet: document.body.innerHTML.substring(0, 2000),
+        };
+      });
+
+      this.logger.log(
+        `PAGE DEBUG: Found ${pageDebug.foundSpans} potential date spans`,
+      );
+      this.logger.log(`Has testid element: ${pageDebug.hasTestIdElement}`);
+      if (pageDebug.spans.length > 0) {
+        this.logger.log(
+          `Date spans:`,
+          JSON.stringify(pageDebug.spans, null, 2),
+        );
+      }
+
+      try {
+        await page.waitForSelector('[data-testid="ad-posted-at"]', {
+          timeout: 5000,
+        });
+        this.logger.log('Date element found, proceeding with scraping');
+      } catch {
+        this.logger.warn(
+          'Date element not found after waiting, will attempt scraping anyway',
+        );
+      }
+
       const data = await page.evaluate(() => {
         type ScrapedResult = {
           title: string | null;
@@ -216,35 +327,153 @@ export class ScraperProcessor extends WorkerHost {
         const createdAtElement = document.querySelector(
           '[data-testid="ad-posted-at"]',
         );
-        const dateText = createdAtElement?.textContent?.trim() || '';
+        let dateText = createdAtElement?.textContent?.trim() || '';
         let createdAt: string | null = null;
+        const dateDebug: string[] = [];
 
-        if (dateText) {
-          const monthMap = {
-            stycznia: 0,
-            lutego: 1,
-            marca: 2,
-            kwietnia: 3,
-            maja: 4,
-            czerwca: 5,
-            lipca: 6,
-            sierpnia: 7,
-            września: 8,
-            października: 9,
-            listopada: 10,
-            grudnia: 11,
-          };
+        dateDebug.push('=== DATE EXTRACTION DEBUG ===');
+        dateDebug.push(`Date element found: ${!!createdAtElement}`);
 
-          const match = dateText.match(/(\d+)\s+(\w+)\s+(\d+)/);
-          if (match) {
-            const day = parseInt(match[1]);
-            const month = monthMap[match[2] as keyof typeof monthMap];
-            const year = parseInt(match[3]);
-            if (!isNaN(day) && month !== undefined && !isNaN(year)) {
-              createdAt = new Date(year, month, day).toISOString();
+        if (!createdAtElement) {
+          dateDebug.push('Trying alternative selectors...');
+
+          const altElement1 = document.querySelector(
+            '[data-cy="ad-posted-at"]',
+          );
+          if (altElement1) {
+            dateDebug.push('Found with data-cy="ad-posted-at"');
+            dateText = altElement1.textContent?.trim() || '';
+          }
+
+          const parentContainer = document.querySelector('.css-1yzzyg0');
+          if (parentContainer && !dateText) {
+            dateDebug.push('Found parent container .css-1yzzyg0');
+            const spans = parentContainer.querySelectorAll('span');
+            spans.forEach((span, idx) => {
+              const text = span.textContent?.trim() || '';
+              dateDebug.push(`  Span ${idx}: "${text.substring(0, 50)}"`);
+              if (
+                text.match(/\d+\s+\w+\s+\d{4}/) ||
+                text.toLowerCase().includes('dzisiaj') ||
+                text.toLowerCase().includes('wczoraj')
+              ) {
+                dateText = text;
+                dateDebug.push(`  Using span ${idx} as date source`);
+              }
+            });
+          }
+
+          if (!dateText) {
+            const allText = document.body.innerText;
+            const dodaneMatch = allText.match(
+              /Dodane\s+(\d+\s+\w+\s+\d{4}|dzisiaj|wczoraj)/i,
+            );
+            if (dodaneMatch) {
+              dateText = dodaneMatch[1];
+              dateDebug.push(
+                `Found date via "Dodane" text search: "${dateText}"`,
+              );
             }
           }
         }
+
+        dateDebug.push(`Raw date text: "${dateText}"`);
+        dateDebug.push(
+          `Raw date charCodes: ${Array.from(dateText)
+            .map((c) => c.charCodeAt(0))
+            .join(',')}`,
+        );
+        dateDebug.push(
+          `Element HTML: ${createdAtElement?.outerHTML?.substring(0, 200) || 'N/A'}`,
+        );
+
+        dateText = dateText.replace(/^dodane\s+/i, '').trim();
+        dateDebug.push(`Cleaned date text: "${dateText}"`);
+
+        if (dateText) {
+          const now = new Date();
+
+          if (
+            dateText.toLowerCase().includes('dzisiaj') ||
+            dateText.toLowerCase().includes('dziś')
+          ) {
+            createdAt = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+            ).toISOString();
+            dateDebug.push(`Date is TODAY: ${createdAt}`);
+          } else if (dateText.toLowerCase().includes('wczoraj')) {
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            createdAt = new Date(
+              yesterday.getFullYear(),
+              yesterday.getMonth(),
+              yesterday.getDate(),
+            ).toISOString();
+            dateDebug.push(`Date is YESTERDAY: ${createdAt}`);
+          } else {
+            const monthMap: Record<string, number> = {
+              stycznia: 0,
+              lutego: 1,
+              marca: 2,
+              kwietnia: 3,
+              maja: 4,
+              czerwca: 5,
+              lipca: 6,
+              sierpnia: 7,
+              września: 8,
+              pazdziernika: 9,
+              października: 9,
+              listopada: 10,
+              grudnia: 11,
+            };
+
+            const normalizedDate = dateText.replace(/\u00A0/g, ' ');
+            dateDebug.push(`Normalized date: "${normalizedDate}"`);
+
+            const match = normalizedDate.match(
+              /(\d+)\s+([a-ząćęłńóśźż]+)\s+(\d+)/i,
+            );
+            dateDebug.push(
+              `Date regex match result: ${match ? 'MATCHED' : 'NO MATCH'}`,
+            );
+            if (match) {
+              dateDebug.push(
+                `Match groups: [0]="${match[0]}", [1]="${match[1]}", [2]="${match[2]}", [3]="${match[3]}"`,
+              );
+              const day = parseInt(match[1]);
+              let monthName = match[2].toLowerCase();
+
+              monthName = monthName
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+
+              dateDebug.push(`Normalized month name: "${monthName}"`);
+              const month = monthMap[monthName];
+              const year = parseInt(match[3]);
+              dateDebug.push(
+                `Parsed values: day=${day}, month=${month} (${monthName}), year=${year}`,
+              );
+              if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+                createdAt = new Date(year, month, day).toISOString();
+                dateDebug.push(
+                  `Date parsed: ${day} ${monthName} ${year} -> ${createdAt}`,
+                );
+              } else {
+                dateDebug.push(
+                  `Date parsing failed - invalid values: day=${day}, month=${month}, year=${year}`,
+                );
+              }
+            } else {
+              dateDebug.push(`✗ Date regex did not match: "${normalizedDate}"`);
+            }
+          }
+        } else {
+          dateDebug.push('✗ No date text found');
+        }
+
+        dateDebug.push(`=== FINAL createdAt: ${createdAt} ===`);
 
         const descElement = document.querySelector(
           '[data-cy="ad_description"] .css-19duwlz',
@@ -405,9 +634,11 @@ export class ScraperProcessor extends WorkerHost {
             lastSeen,
           },
           viewsExtractionMethod,
+          dateDebug,
         } as ScrapedResult & {
           viewsExtractionMethod: string;
           debugInfo: string[];
+          dateDebug: string[];
         };
       });
 
@@ -418,7 +649,26 @@ export class ScraperProcessor extends WorkerHost {
       const extractionData = data as typeof data & {
         viewsExtractionMethod: string;
         debugInfo?: string[];
+        dateDebug?: string[];
       };
+
+      this.logger.log(
+        `Date extraction result: ${data.createdAt ? `"${data.createdAt}"` : 'NULL'} for URL: ${url}`,
+      );
+
+      this.logger.log(
+        `DEBUG: dateDebug exists? ${!!extractionData.dateDebug}, length: ${extractionData.dateDebug?.length || 0}`,
+      );
+
+      if (extractionData.dateDebug && extractionData.dateDebug.length > 0) {
+        this.logger.log('DATE EXTRACTION DEBUG FROM BROWSER:');
+        extractionData.dateDebug.forEach((line) => {
+          this.logger.log(`   ${line}`);
+        });
+      } else {
+        this.logger.warn('No date debug information returned from browser!');
+      }
+
       this.logger.log(
         `Views extraction for ${url}: ${data.views} views using method: ${extractionData.viewsExtractionMethod}`,
       );
@@ -587,6 +837,13 @@ export class ScraperProcessor extends WorkerHost {
           );
         }
 
+        const finalCreatedAt = data.createdAt
+          ? new Date(data.createdAt)
+          : new Date();
+        this.logger.log(
+          `Saving offer with createdAt: ${finalCreatedAt.toISOString()} (from extracted: ${data.createdAt || 'NULL'})`,
+        );
+
         createdOffer = await this.databaseService.offer.create({
           data: {
             link: url,
@@ -615,7 +872,7 @@ export class ScraperProcessor extends WorkerHost {
             rentAdditional: parsed.rentAdditional,
             source: 'olx',
             negotiable: data.negotiable || false,
-            createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+            createdAt: finalCreatedAt,
             views: data.views,
             images: data.images || [],
             contact: data.contact?.name
@@ -629,7 +886,7 @@ export class ScraperProcessor extends WorkerHost {
         });
 
         this.logger.log(
-          `✨ Created new offer ${createdOffer.id} with ${data.views} views (method: ${extractionData.viewsExtractionMethod})`,
+          `Created new offer ${createdOffer.id} with ${data.views} views (method: ${extractionData.viewsExtractionMethod})`,
         );
         this.logger.debug(
           `Created new offer ${createdOffer.id} for URL: ${url}`,
@@ -709,6 +966,281 @@ export class ScraperProcessor extends WorkerHost {
             (src) => src && (src.includes('otodom') || src.includes('cdn')),
           )
           .slice(0, 10);
+
+        let views = 0;
+        const viewsDebug: string[] = [];
+        viewsDebug.push('=== OTODOM VIEWS EXTRACTION DEBUG ===');
+
+        const viewsElement = document.querySelector(
+          '.css-lcnm6u.e3km50a2, .e3km50a2',
+        );
+        if (viewsElement) {
+          const viewsText = viewsElement.textContent?.trim() || '';
+          viewsDebug.push(`Method 1: Found views element: "${viewsText}"`);
+          const viewsMatch = viewsText.match(/(\d+)/);
+          if (viewsMatch) {
+            views = parseInt(viewsMatch[1]);
+            viewsDebug.push(`  Extracted views: ${views}`);
+          }
+        } else {
+          viewsDebug.push('Method 1: ✗ Views element not found');
+
+          const statsContainer = document.querySelector(
+            '.css-1jzjbfr.e3km50a0, .e3km50a0',
+          );
+          if (statsContainer) {
+            viewsDebug.push(
+              'Method 2: Found statistics container, searching for views',
+            );
+            const allText = statsContainer.textContent || '';
+            const viewsMatch = allText.match(/(\d+)\s*wyświetl/i);
+            if (viewsMatch) {
+              views = parseInt(viewsMatch[1]);
+              viewsDebug.push(`  Extracted views from container: ${views}`);
+            } else {
+              viewsDebug.push('  No views pattern found in container');
+            }
+          } else {
+            viewsDebug.push('Method 2: ✗ Statistics container not found');
+          }
+        }
+
+        if (views === 0) {
+          viewsDebug.push('Method 3: Searching entire page for views...');
+          const bodyText = document.body.textContent || '';
+          const viewsPattern = /(\d+)\s*wyświetl/i;
+          const match = bodyText.match(viewsPattern);
+          if (match) {
+            views = parseInt(match[1]);
+            viewsDebug.push(`  Method 3 success: ${views} views`);
+          } else {
+            viewsDebug.push('  No views pattern found in page');
+          }
+        }
+
+        if (views === 0) {
+          viewsDebug.push(
+            'Method 4: Looking for elements near "wyświetleń"...',
+          );
+          const allElements = document.querySelectorAll(
+            '[class*="e3km50a"], [class*="stat"], [class*="view"]',
+          );
+          for (let i = 0; i < allElements.length; i++) {
+            const el = allElements[i];
+            const text = el.textContent?.toLowerCase() || '';
+            if (text.includes('wyświetl')) {
+              const numMatch = text.match(/(\d+)/);
+              if (numMatch) {
+                views = parseInt(numMatch[1]);
+                viewsDebug.push(
+                  `  Method 4 success: Found ${views} views near "wyświetleń"`,
+                );
+                break;
+              }
+            }
+          }
+          if (views === 0) {
+            viewsDebug.push('  No views found near "wyświetleń"');
+          }
+        }
+
+        if (views === 0) {
+          viewsDebug.push(
+            'All methods failed - No views found, defaulting to 0',
+          );
+          viewsDebug.push(
+            'This may indicate CloudFront blocking or page structure change',
+          );
+        } else {
+          viewsDebug.push(`Successfully extracted ${views} views`);
+        }
+
+        viewsDebug.push(`=== FINAL VIEWS: ${views} ===`);
+
+        let createdAt: string | null = null;
+        const dateDebug: string[] = [];
+        dateDebug.push('=== OTODOM DATE EXTRACTION DEBUG ===');
+
+        const historyRows = document.querySelectorAll(
+          '.css-17wo1v5.etrn3wv7, .etrn3wv7',
+        );
+        dateDebug.push(
+          `Method 1: Found ${historyRows.length} history rows in "Historia i statystyki"`,
+        );
+
+        for (let i = 0; i < historyRows.length; i++) {
+          const row = historyRows[i];
+          const cells = Array.from(row.querySelectorAll('.etrn3wv2'));
+
+          dateDebug.push(`  Row ${i}: Found ${cells.length} cells`);
+
+          if (cells.length >= 2) {
+            const dateCell = cells[0];
+            const actionCell = cells[1];
+
+            const dateText = dateCell.textContent?.trim() || '';
+            const actionText = actionCell.textContent?.trim() || '';
+
+            dateDebug.push(
+              `  Row ${i}: date="${dateText}", action="${actionText}"`,
+            );
+
+            if (
+              actionText.toLowerCase().includes('dodanie') &&
+              actionText.toLowerCase().includes('ogłoszenia')
+            ) {
+              dateDebug.push(`  ✓ Found "Dodanie ogłoszenia" row`);
+              const dateMatch = dateText.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+              if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]) - 1;
+                const year = parseInt(dateMatch[3]);
+
+                createdAt = new Date(Date.UTC(year, month, day)).toISOString();
+                dateDebug.push(
+                  `  Parsed date: ${day}.${month + 1}.${year} -> ${createdAt}`,
+                );
+                break;
+              } else {
+                dateDebug.push(`  Date format not matched: "${dateText}"`);
+              }
+            }
+          }
+        }
+
+        if (!createdAt) {
+          dateDebug.push(
+            'Method 2: Trying alternative history row selectors...',
+          );
+          const altHistoryRows = document.querySelectorAll(
+            '[class*="etrn3wv"], div[class*="history"] tr, table tr',
+          );
+          dateDebug.push(
+            `  Found ${altHistoryRows.length} alternative history rows`,
+          );
+
+          for (let i = 0; i < Math.min(altHistoryRows.length, 20); i++) {
+            const row = altHistoryRows[i];
+            const rowText = row.textContent?.toLowerCase() || '';
+
+            if (rowText.includes('dodanie') && rowText.includes('ogłoszenia')) {
+              dateDebug.push(`  Found potential row at index ${i}`);
+              const dateMatch = row.textContent?.match(
+                /(\d{1,2})\.(\d{1,2})\.(\d{4})/,
+              );
+              if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]) - 1;
+                const year = parseInt(dateMatch[3]);
+
+                createdAt = new Date(Date.UTC(year, month, day)).toISOString();
+                dateDebug.push(
+                  `  ✓ Method 2 success: ${day}.${month + 1}.${year} -> ${createdAt}`,
+                );
+                break;
+              }
+            }
+          }
+        }
+
+        if (!createdAt) {
+          dateDebug.push(
+            'Method 3: Searching entire page content for creation date...',
+          );
+          const bodyText = document.body.textContent || '';
+          const creationPattern =
+            /Dodanie\s+ogłoszenia[\s\S]{0,100}?(\d{1,2})\.(\d{1,2})\.(\d{4})/i;
+          const match = bodyText.match(creationPattern);
+
+          if (match) {
+            const day = parseInt(match[1]);
+            const month = parseInt(match[2]) - 1;
+            const year = parseInt(match[3]);
+
+            createdAt = new Date(Date.UTC(year, month, day)).toISOString();
+            dateDebug.push(
+              `  Method 3 success: ${day}.${month + 1}.${year} -> ${createdAt}`,
+            );
+          } else {
+            dateDebug.push('  No date pattern found in page content');
+          }
+        }
+
+        if (!createdAt) {
+          dateDebug.push('Method 4: Looking for dates near "Historia"...');
+          const historySection = document.querySelector(
+            '[class*="history"], [class*="Historia"], [data-cy*="history"]',
+          );
+          if (historySection) {
+            const sectionText = historySection.textContent || '';
+            const allDates = sectionText.match(
+              /(\d{1,2})\.(\d{1,2})\.(\d{4})/g,
+            );
+            if (allDates && allDates.length > 0) {
+              dateDebug.push(`  Found ${allDates.length} dates in history`);
+              const oldestDate = allDates[allDates.length - 1];
+              const match = oldestDate.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+              if (match) {
+                const day = parseInt(match[1]);
+                const month = parseInt(match[2]) - 1;
+                const year = parseInt(match[3]);
+
+                createdAt = new Date(Date.UTC(year, month, day)).toISOString();
+                dateDebug.push(
+                  `  Method 4 success (oldest date): ${oldestDate} -> ${createdAt}`,
+                );
+              }
+            } else {
+              dateDebug.push('  No dates found in history section');
+            }
+          } else {
+            dateDebug.push('  History section not found');
+          }
+        }
+
+        if (!createdAt) {
+          dateDebug.push(
+            'Method 5: Looking for dates in Otodom paragraph classes...',
+          );
+          const dateParagraphs = document.querySelectorAll(
+            'p.css-f4ltfo, .css-f4ltfo, p[class*="f4ltfo"]',
+          );
+          dateDebug.push(`  Found ${dateParagraphs.length} date paragraphs`);
+
+          for (let i = 0; i < dateParagraphs.length; i++) {
+            const p = dateParagraphs[i];
+            const text = p.textContent?.trim() || '';
+            const dateMatch = text.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+
+            if (dateMatch) {
+              const day = parseInt(dateMatch[1]);
+              const month = parseInt(dateMatch[2]) - 1;
+              const year = parseInt(dateMatch[3]);
+              createdAt = new Date(Date.UTC(year, month, day)).toISOString();
+              dateDebug.push(
+                `  Method 5 success at index ${i}: ${text} -> ${createdAt}`,
+              );
+              break;
+            }
+          }
+
+          if (!createdAt) {
+            dateDebug.push('  No valid dates found in paragraphs');
+          }
+        }
+
+        if (!createdAt) {
+          dateDebug.push(
+            'All methods failed - No creation date found, will use current date',
+          );
+          dateDebug.push(
+            'This may indicate CloudFront blocking or page structure change',
+          );
+        } else {
+          dateDebug.push(`Successfully extracted creation date: ${createdAt}`);
+        }
+
+        dateDebug.push(`=== FINAL CREATED_AT: ${createdAt} ===`);
 
         const details: Record<string, string> = {};
 
@@ -942,9 +1474,54 @@ export class ScraperProcessor extends WorkerHost {
           details,
           images,
           contact,
+          views,
+          createdAt,
+          viewsDebug,
+          dateDebug,
           source: 'otodom' as const,
-        } as OtodomScrapedData;
+        } as OtodomScrapedData & {
+          viewsDebug: string[];
+          dateDebug: string[];
+        };
       });
+
+      const extractionData = data as typeof data & {
+        viewsDebug: string[];
+        dateDebug: string[];
+      };
+
+      this.logger.log(
+        `OTODOM: Extracted ${extractionData.views} views for ${url}`,
+      );
+      this.logger.log(
+        `OTODOM: Extracted createdAt: ${extractionData.createdAt ? `"${extractionData.createdAt}"` : 'NULL (will use current time)'} for ${url}`,
+      );
+
+      if (extractionData.viewsDebug && extractionData.viewsDebug.length > 0) {
+        this.logger.debug('OTODOM VIEWS EXTRACTION DEBUG:');
+        extractionData.viewsDebug.forEach((line) => {
+          this.logger.debug(`   ${line}`);
+        });
+      }
+
+      if (extractionData.dateDebug && extractionData.dateDebug.length > 0) {
+        this.logger.debug('OTODOM DATE EXTRACTION DEBUG:');
+        extractionData.dateDebug.forEach((line) => {
+          this.logger.debug(`   ${line}`);
+        });
+      }
+
+      if (extractionData.views === 0 && !extractionData.createdAt) {
+        this.logger.warn(
+          `OTODOM: Both views and createdAt extraction failed for ${url}`,
+        );
+        this.logger.warn(
+          `This usually indicates CloudFront blocking or major page structure change`,
+        );
+        this.logger.warn(
+          `The offer will be saved with views=0 and createdAt=now()`,
+        );
+      }
 
       const priceValue = data.price
         ? parseFloat(data.price.replace(/[^0-9,]/g, '').replace(',', '.'))
@@ -1034,7 +1611,7 @@ export class ScraperProcessor extends WorkerHost {
 
       if (existingOffer) {
         const previousViews = existingOffer.views;
-        const newViews = 0;
+        const newViews = data.views || 0;
 
         createdOffer = await this.databaseService.offer.update({
           where: { link: url },
@@ -1077,12 +1654,19 @@ export class ScraperProcessor extends WorkerHost {
         });
 
         this.logger.log(
-          `Updated Otodom offer ${existingOffer.id} views: ${previousViews} → ${newViews} (Otodom doesn't provide view counts)`,
+          `Updated Otodom offer ${existingOffer.id} views: ${previousViews} → ${newViews} (${newViews > previousViews ? `+${newViews - previousViews}` : 'no change'})`,
         );
         this.logger.debug(
           `Updated existing Otodom offer ${existingOffer.id} for URL: ${url}`,
         );
       } else {
+        const finalCreatedAt = data.createdAt
+          ? new Date(data.createdAt)
+          : new Date();
+        this.logger.log(
+          `Creating Otodom offer with createdAt: ${finalCreatedAt.toISOString()} (from extracted: ${data.createdAt || 'NULL'})`,
+        );
+
         createdOffer = await this.databaseService.offer.create({
           data: {
             link: url,
@@ -1115,15 +1699,15 @@ export class ScraperProcessor extends WorkerHost {
             furnishing: data.details['wyposażenie'] || null,
             media: data.details['media'] || null,
             source: 'otodom',
-            createdAt: new Date(),
-            views: 0,
+            createdAt: finalCreatedAt,
+            views: data.views || 0,
             images: data.images || [],
             isNew: isNew,
           },
         });
 
         this.logger.log(
-          `Created new Otodom offer ${createdOffer.id} with 0 views (Otodom doesn't provide view counts)`,
+          `Created new Otodom offer ${createdOffer.id} with ${data.views || 0} views and createdAt: ${finalCreatedAt.toISOString()}`,
         );
         this.logger.debug(
           `Created new Otodom offer ${createdOffer.id} for URL: ${url}`,
@@ -1147,7 +1731,7 @@ export class ScraperProcessor extends WorkerHost {
       }
 
       this.logger.log(
-        `Otodom scraping completed for ${url} - Offer ID: ${createdOffer?.id}, Views: 0 (not available)`,
+        `Otodom scraping completed for ${url} - Offer ID: ${createdOffer?.id}, Views: ${data.views || 0}, CreatedAt: ${data.createdAt || 'current time'}`,
       );
     } catch (error) {
       this.logger.error(

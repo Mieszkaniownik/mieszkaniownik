@@ -6,23 +6,21 @@ import FilterBar from '../components/FilterBar'
 import AlertFilterButtons from '../components/AlertFilterButtons'
 import useUser from '../context/UserContext/useUser'
 import useFilters from '../hooks/useFilters'
-import { API_BASE_URL } from '../api/api'
+import { apiGet, apiDelete } from '../api/api'
 import {
   MapPin,
   Home,
-  Euro,
   Ruler,
-  Calendar,
   ExternalLink,
   Filter,
-  TrendingUp,
+  Trash2,
+  Eye,
+  Loader2,
+  Info,
   Bell,
-  ChevronLeft,
-  ChevronRight,
-  Image as ImageIcon,
+  TrendingUp,
 } from 'lucide-react'
 import CardSkeleton from '../components/CardSkeleton'
-import StatsSkeleton from '../components/StatsSkeleton'
 import {
   MATCH_SORT_OPTIONS,
   DEFAULT_SORT,
@@ -37,7 +35,7 @@ function MatchesPage() {
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [imageIndexes, setImageIndexes] = useState({})
+  const [deletingMatchId, setDeletingMatchId] = useState(null)
 
   const { filters, updateFilter } = useFilters({
     alertId: searchParams.get('alert') || DEFAULT_FILTER.ALERT,
@@ -47,8 +45,6 @@ function MatchesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-
       const params = new URLSearchParams()
 
       if (filters.alertId !== 'all') {
@@ -59,33 +55,15 @@ function MatchesPage() {
         params.append('sortBy', filters.sortBy)
       }
 
-      const matchesUrl = `${API_BASE_URL}/matches?${params.toString()}`
-
-      const [matchesRes, alertsRes] = await Promise.all([
-        fetch(matchesUrl, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/alerts`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ])
-
-      if (!matchesRes.ok || !alertsRes.ok) {
-        throw new Error('Nie udało się pobrać danych')
-      }
-
       const [matchesData, alertsData] = await Promise.all([
-        matchesRes.json(),
-        alertsRes.json(),
+        apiGet(`/matches?${params.toString()}`),
+        apiGet('/alerts'),
       ])
-
-      console.log('Matches data:', matchesData)
-      console.log('Sample match images:', matchesData[0]?.offer?.images)
 
       setMatches(matchesData)
       setAlerts(alertsData)
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Nie udało się pobrać danych')
       console.error(err)
     } finally {
       setLoading(false)
@@ -93,7 +71,7 @@ function MatchesPage() {
   }, [filters])
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
       navigate('/login', { replace: true })
       return
     }
@@ -109,62 +87,30 @@ function MatchesPage() {
     }
   }
 
-  const nextImage = (matchId, totalImages) => {
-    setImageIndexes((prev) => ({
-      ...prev,
-      [matchId]: ((prev[matchId] || 0) + 1) % totalImages,
-    }))
-  }
-
-  const prevImage = (matchId, totalImages) => {
-    setImageIndexes((prev) => ({
-      ...prev,
-      [matchId]: ((prev[matchId] || 0) - 1 + totalImages) % totalImages,
-    }))
-  }
-
-  const goToImage = (matchId, index) => {
-    setImageIndexes((prev) => ({
-      ...prev,
-      [matchId]: index,
-    }))
-  }
-
-  const calculateStats = () => {
-    if (!matches || matches.length === 0) {
-      return {
-        totalMatches: 0,
-        activeAlerts: alerts.filter((a) => a.status === 'ACTIVE').length,
-        recentMatches: 0,
-      }
+  async function handleDeleteMatch(matchId, offerTitle) {
+    if (
+      !window.confirm(`Czy na pewno chcesz usunąć dopasowanie "${offerTitle}"?`)
+    ) {
+      return
     }
 
-    const oneDayAgo = new Date()
-    oneDayAgo.setDate(oneDayAgo.getDate() - 1)
-    const recentCount = matches.filter(
-      (match) => new Date(match.matchedAt) > oneDayAgo
-    ).length
-
-    return {
-      totalMatches: matches.length,
-      activeAlerts:
-        filters.alertId === 'all'
-          ? alerts.filter((a) => a.status === 'ACTIVE').length
-          : alerts.find((a) => a.id.toString() === filters.alertId)?.status ===
-            'ACTIVE'
-          ? 1
-          : 0,
-      recentMatches: recentCount,
+    setDeletingMatchId(matchId)
+    try {
+      await apiDelete(`/matches/${matchId}`)
+      await fetchData()
+    } catch (err) {
+      alert('Błąd: Nie udało się usunąć dopasowania')
+      console.error(err)
+    } finally {
+      setDeletingMatchId(null)
     }
   }
-
-  const currentStats = calculateStats()
 
   if (loading) {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8">
+        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
           <div className="max-w-7xl w-full">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-blue-950 mb-2">
@@ -174,8 +120,6 @@ function MatchesPage() {
                 Mieszkania dopasowane do Twoich alertów
               </p>
             </div>
-
-            <StatsSkeleton />
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -192,7 +136,7 @@ function MatchesPage() {
   return (
     <>
       <Header />
-      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8">
+      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
         <div className="max-w-7xl w-full">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-blue-950 mb-2">
@@ -201,58 +145,6 @@ function MatchesPage() {
             <p className="text-gray-600">
               Mieszkania dopasowane do Twoich alertów
             </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <TrendingUp className="text-blue-600" size={24} />
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">
-                    {filters.alertId === 'all'
-                      ? 'Wszystkie dopasowania'
-                      : 'Dopasowania alertu'}
-                  </p>
-                  <p className="text-2xl font-bold text-blue-950">
-                    {currentStats.totalMatches}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <Bell className="text-green-600" size={24} />
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">
-                    {filters.alertId === 'all'
-                      ? 'Aktywne alerty'
-                      : 'Status alertu'}
-                  </p>
-                  <p className="text-2xl font-bold text-blue-950">
-                    {currentStats.activeAlerts}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <Home className="text-purple-600" size={24} />
-                </div>
-                <div>
-                  <p className="text-gray-600 text-sm">Nowe oferty (24h)</p>
-                  <p className="text-2xl font-bold text-blue-950">
-                    {currentStats.recentMatches}
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
 
           {/* Alert Filter */}
@@ -307,242 +199,171 @@ function MatchesPage() {
               </button>
             </div>
           ) : (
-            <div className="grid gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {matches.map((match) => {
-                const currentImageIndex = imageIndexes[match.id] || 0
-                const images = match.offer?.images || []
-                const hasImages = images.length > 0
+                const firstImage = match.offer?.images?.[0]
 
                 return (
                   <div
                     key={match.id}
-                    className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition"
+                    className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
                   >
-                    {hasImages ? (
-                      <div className="relative bg-gray-900 aspect-video">
+                    {/* Image */}
+                    <div className="relative aspect-video bg-gray-900">
+                      {firstImage ? (
                         <img
-                          src={images[currentImageIndex]}
-                          alt={`${match.offer.title} - zdjęcie ${
-                            currentImageIndex + 1
-                          }`}
+                          src={firstImage}
+                          alt={match.offer.title}
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             e.target.onerror = null
                             e.target.src =
-                              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext fill="%236b7280" font-family="sans-serif" font-size="24" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EBrak zdjęcia%3C/text%3E%3C/svg%3E'
+                              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext fill="%236b7280" font-family="sans-serif" font-size="18" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EBrak zdjęcia%3C/text%3E%3C/svg%3E'
                           }}
                         />
-
-                        {images.length > 1 && (
-                          <>
-                            <button
-                              onClick={() => prevImage(match.id, images.length)}
-                              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
-                              aria-label="Poprzednie zdjęcie"
-                            >
-                              <ChevronLeft size={24} />
-                            </button>
-                            <button
-                              onClick={() => nextImage(match.id, images.length)}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition"
-                              aria-label="Następne zdjęcie"
-                            >
-                              <ChevronRight size={24} />
-                            </button>
-
-                            <div className="absolute bottom-2 right-2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
-                              {currentImageIndex + 1} / {images.length}
-                            </div>
-
-                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
-                              {images.map((_, index) => (
-                                <button
-                                  key={index}
-                                  onClick={() => goToImage(match.id, index)}
-                                  className={`w-2 h-2 rounded-full transition ${
-                                    index === currentImageIndex
-                                      ? 'bg-white'
-                                      : 'bg-white/50 hover:bg-white/75'
-                                  }`}
-                                  aria-label={`Przejdź do zdjęcia ${index + 1}`}
-                                />
-                              ))}
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-100 aspect-video flex items-center justify-center">
-                        <div className="text-center text-gray-400">
-                          <ImageIcon size={48} className="mx-auto mb-2" />
-                          <p className="text-sm">Brak zdjęć</p>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                          <Home size={48} />
                         </div>
-                      </div>
-                    )}
-
-                    <div className="p-6">
-                      {match.alert && (
-                        <div className="mb-4">
-                          <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm">
-                            <Bell size={14} />
-                            {match.alert.name}
+                      )}
+                      {match.offer.isNew && (
+                        <div className="absolute top-2 right-2">
+                          <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold">
+                            NOWE
                           </span>
                         </div>
                       )}
-
-                      {match.offer && (
-                        <>
-                          <div className="flex justify-between items-start mb-4">
-                            <div className="flex-grow">
-                              <h3 className="text-xl font-semibold text-blue-950 mb-2">
-                                {match.offer.title}
-                              </h3>
-                              <div className="flex flex-wrap gap-4 text-gray-600">
-                                <div className="flex items-center gap-1">
-                                  <MapPin size={16} />
-                                  <span>
-                                    {match.offer.city}
-                                    {match.offer.district &&
-                                      `, ${match.offer.district}`}
-                                  </span>
-                                </div>
-                                {match.offer.street && (
-                                  <div className="flex items-center gap-1">
-                                    <Home size={16} />
-                                    <span>
-                                      {match.offer.street}{' '}
-                                      {match.offer.streetNumber}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-2xl font-bold text-blue-950">
-                                {parseFloat(match.offer.price).toLocaleString(
-                                  'pl-PL'
-                                )}{' '}
-                                zł
-                              </div>
-                              {match.offer.negotiable && (
-                                <span className="text-sm text-green-600">
-                                  Do negocjacji
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                            {match.offer.footage && (
-                              <div className="flex items-center gap-2">
-                                <Ruler size={16} className="text-gray-400" />
-                                <div>
-                                  <p className="text-xs text-gray-500">
-                                    Metraż
-                                  </p>
-                                  <p className="font-medium">
-                                    {parseFloat(match.offer.footage)} m²
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                            {match.offer.rooms && (
-                              <div className="flex items-center gap-2">
-                                <Home size={16} className="text-gray-400" />
-                                <div>
-                                  <p className="text-xs text-gray-500">
-                                    Pokoje
-                                  </p>
-                                  <p className="font-medium">
-                                    {match.offer.rooms}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
-                            {match.offer.floor !== null &&
-                              match.offer.floor !== undefined && (
-                                <div className="flex items-center gap-2">
-                                  <TrendingUp
-                                    size={16}
-                                    className="text-gray-400"
-                                  />
-                                  <div>
-                                    <p className="text-xs text-gray-500">
-                                      Piętro
-                                    </p>
-                                    <p className="font-medium">
-                                      {match.offer.floor}
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
-                            <div className="flex items-center gap-2">
-                              <Calendar size={16} className="text-gray-400" />
-                              <div>
-                                <p className="text-xs text-gray-500">
-                                  Dopasowano
-                                </p>
-                                <p className="font-medium text-sm">
-                                  {new Date(match.matchedAt).toLocaleDateString(
-                                    'pl-PL'
-                                  )}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 mb-4">
-                            {match.offer.buildingType && (
-                              <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
-                                {match.offer.buildingType}
-                              </span>
-                            )}
-                            {match.offer.furniture && (
-                              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                                Umeblowane
-                              </span>
-                            )}
-                            {match.offer.elevator && (
-                              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm">
-                                Winda
-                              </span>
-                            )}
-                            {match.offer.pets && (
-                              <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
-                                Zwierzęta OK
-                              </span>
-                            )}
-                            {match.offer.isNew && (
-                              <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">
-                                NOWA OFERTA
-                              </span>
-                            )}
-                          </div>
-
-                          {match.offer.description && (
-                            <p className="text-gray-600 mb-4 line-clamp-2">
-                              {match.offer.description}
-                            </p>
-                          )}
-
-                          <div className="flex gap-3">
-                            <a
-                              href={match.offer.link}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
-                            >
-                              <ExternalLink size={18} />
-                              Zobacz ofertę
-                            </a>
-                            {match.offer.contact && (
-                              <button className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition">
-                                Kontakt
-                              </button>
-                            )}
-                          </div>
-                        </>
+                      {match.offer?.images && match.offer.images.length > 1 && (
+                        <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                          +{match.offer.images.length - 1} zdjęć
+                        </div>
                       )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-4 flex flex-col flex-grow">
+                      {/* Alert badge */}
+                      {match.alert && (
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
+                            <Bell size={12} />
+                            {match.alert.name}
+                          </span>
+                          {match.alert._count?.matches !== undefined && (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded text-xs font-medium">
+                              <Bell size={12} />
+                              {match.alert._count.matches}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Title and Price */}
+                      <h3 className="text-lg font-semibold text-blue-950 mb-2 line-clamp-2">
+                        {match.offer.title}
+                      </h3>
+                      <div className="text-2xl font-bold text-blue-950 mb-3">
+                        {parseFloat(match.offer.price).toLocaleString('pl-PL')}{' '}
+                        zł
+                      </div>
+
+                      {/* Location */}
+                      <div className="flex items-center gap-1 text-gray-600 text-sm mb-3">
+                        <MapPin size={14} />
+                        <span className="line-clamp-1">
+                          {match.offer.city}
+                          {match.offer.district && `, ${match.offer.district}`}
+                        </span>
+                      </div>
+
+                      {/* Key Stats */}
+                      <div className="flex flex-wrap gap-3 mb-4 text-sm">
+                        {match.offer.footage && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Ruler size={14} />
+                            <span>{parseFloat(match.offer.footage)} m²</span>
+                          </div>
+                        )}
+                        {match.offer.rooms && (
+                          <div className="flex items-center gap-1 text-gray-600">
+                            <Home size={14} />
+                            <span>{match.offer.rooms} pok.</span>
+                          </div>
+                        )}
+                        {match.offer.floor !== null &&
+                          match.offer.floor !== undefined && (
+                            <div className="flex items-center gap-1 text-gray-600">
+                              <TrendingUp size={14} />
+                              <span>{match.offer.floor} p.</span>
+                            </div>
+                          )}
+                      </div>
+
+                      {/* Tags */}
+                      <div className="flex flex-wrap gap-1 mb-4">
+                        {match.offer.furniture && (
+                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                            Umeblowane
+                          </span>
+                        )}
+                        {match.offer.elevator && (
+                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                            Winda
+                          </span>
+                        )}
+                        {match.offer.pets && (
+                          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                            Zwierzęta
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Actions */}
+                      <div className="mt-auto space-y-2">
+                        <button
+                          onClick={() => navigate(`/matches/${match.id}`)}
+                          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-full hover:bg-blue-700 transition-colors"
+                        >
+                          <Info size={16} />
+                          <span className="text-sm font-medium">Szczegóły</span>
+                        </button>
+                        <div className="flex gap-2">
+                          <a
+                            href={match.offer.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-blue-600 text-blue-600 rounded-full hover:bg-blue-50 transition-colors text-sm font-medium"
+                          >
+                            <ExternalLink size={14} />
+                            Oferta
+                          </a>
+                          {match.alert && (
+                            <button
+                              onClick={() =>
+                                navigate(`/matches?alert=${match.alert.id}`)
+                              }
+                              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-600 rounded-full hover:bg-gray-50 transition-colors text-sm font-medium"
+                              title="Zobacz dopasowania alertu"
+                            >
+                              <Eye size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() =>
+                              handleDeleteMatch(match.id, match.offer?.title)
+                            }
+                            disabled={deletingMatchId === match.id}
+                            className="flex items-center justify-center gap-2 px-3 py-2 border border-red-600 text-red-600 rounded-full hover:bg-red-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Usuń dopasowanie"
+                          >
+                            {deletingMatchId === match.id ? (
+                              <Loader2 size={14} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={14} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )

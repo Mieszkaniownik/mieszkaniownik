@@ -3,12 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import useUser from '../context/UserContext/useUser'
-import { API_BASE_URL } from '../api/api'
+import { apiGet } from '../api/api'
 import {
   Bell,
   Heart,
-  Eye,
-  TrendingUp,
   MapPin,
   Clock,
   AlertCircle,
@@ -17,7 +15,7 @@ import {
   Euro,
   Calendar,
   ArrowRight,
-  BarChart3,
+  SquareArrowOutUpRight,
 } from 'lucide-react'
 import CardSkeleton from '../components/CardSkeleton'
 import StatsSkeleton from '../components/StatsSkeleton'
@@ -33,7 +31,7 @@ function DashboardPage() {
   const [activeAlerts, setActiveAlerts] = useState([])
 
   useEffect(() => {
-    if (!user) {
+    if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
       navigate('/login', { replace: true })
       return
     }
@@ -43,51 +41,11 @@ function DashboardPage() {
   async function fetchDashboardData() {
     setLoading(true)
     try {
-      const token = localStorage.getItem('token')
-
-      const [statsRes, matchesRes, alertsRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/matches/stats`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/matches?limit=5`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        fetch(`${API_BASE_URL}/alerts?status=ACTIVE&limit=3`, {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ])
-
-      console.log('Stats response status:', statsRes.status)
-      console.log('Matches response status:', matchesRes.status)
-      console.log('Alerts response status:', alertsRes.status)
-
-      if (!statsRes.ok) {
-        const errorText = await statsRes.text()
-        console.error('Stats error:', errorText)
-        throw new Error(`Failed to fetch stats: ${statsRes.status}`)
-      }
-
-      if (!matchesRes.ok) {
-        const errorText = await matchesRes.text()
-        console.error('Matches error:', errorText)
-        throw new Error(`Failed to fetch matches: ${matchesRes.status}`)
-      }
-
-      if (!alertsRes.ok) {
-        const errorText = await alertsRes.text()
-        console.error('Alerts error:', errorText)
-        throw new Error(`Failed to fetch alerts: ${alertsRes.status}`)
-      }
-
       const [statsData, matchesData, alertsData] = await Promise.all([
-        statsRes.json(),
-        matchesRes.json(),
-        alertsRes.json(),
+        apiGet(`/matches/stats`),
+        apiGet(`/matches?limit=5`),
+        apiGet(`/alerts?status=ACTIVE&limit=3`),
       ])
-
-      console.log('Stats data:', statsData)
-      console.log('Matches data:', matchesData)
-      console.log('Alerts data:', alertsData)
 
       setStats(statsData)
       setRecentMatches(matchesData)
@@ -104,14 +62,14 @@ function DashboardPage() {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8">
+        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
           <div className="max-w-7xl w-full">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-blue-950 mb-2">
-                Dashboard
+                Witaj! 👋
               </h1>
               <p className="text-gray-600">
-                Twój osobisty przegląd mieszkaniowy
+                Twój osobisty przegląd poszukiwań mieszkaniowych
               </p>
             </div>
 
@@ -136,7 +94,7 @@ function DashboardPage() {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8">
+        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
           <div className="max-w-7xl w-full">
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
               {error}
@@ -151,11 +109,11 @@ function DashboardPage() {
   return (
     <>
       <Header />
-      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 bg-gray-50">
+      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] py-8 px-6 md:px-8 bg-gray-50 mt-16">
         <div className="max-w-7xl w-full">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-blue-950 mb-2">
-              Witaj, {user.name}! 👋
+              {`Witaj${user?.name && `, ${user.name}`}! 👋`}
             </h1>
             <p className="text-gray-600">
               Twój osobisty przegląd poszukiwań mieszkaniowych
@@ -163,68 +121,56 @@ function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-purple-100 rounded-lg">
-                  <Heart className="text-purple-600" size={24} />
-                </div>
-                <button
-                  onClick={() => navigate('/matches')}
-                  className="text-purple-600 hover:text-purple-700"
-                >
-                  <ArrowRight size={20} />
-                </button>
+            <div className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
+              <div className="p-3 bg-purple-100 rounded-lg">
+                <Heart className="text-purple-600" size={24} />
               </div>
-              <p className="text-gray-600 text-sm mb-1">Dopasowania</p>
-              <p className="text-3xl font-bold text-blue-950">
-                {stats?.totalMatches || 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                {stats?.unreadMatches || 0} nowych
-              </p>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Dopasowania</p>
+                <p className="text-3xl font-bold text-blue-950">
+                  {stats?.totalMatches || 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  {stats?.unreadMatches || 0} nowych
+                </p>
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Bell className="text-blue-600" size={24} />
-                </div>
-                <button
-                  onClick={() => navigate('/alerts')}
-                  className="text-blue-600 hover:text-blue-700"
-                >
-                  <ArrowRight size={20} />
-                </button>
+            <div className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
+              <div className="p-3 bg-green-100 rounded-lg">
+                <Activity className="text-green-600" size={24} />
               </div>
-              <p className="text-gray-600 text-sm mb-1">Aktywne Alerty</p>
-              <p className="text-3xl font-bold text-blue-950">
-                {activeAlerts.length}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">
-                Monitorują nowe oferty
-              </p>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Śr. na alert</p>
+                <p className="text-3xl font-bold text-blue-950">
+                  {stats?.matchesByAlert && activeAlerts.length > 0
+                    ? Math.round(stats.totalMatches / activeAlerts.length)
+                    : 0}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">Średnia dopasowań</p>
+              </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <Activity className="text-green-600" size={24} />
-                </div>
+            <div className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
+              <div className="p-3 bg-blue-100 rounded-lg">
+                <Bell className="text-blue-600" size={24} />
               </div>
-              <p className="text-gray-600 text-sm mb-1">Śr. na alert</p>
-              <p className="text-3xl font-bold text-blue-950">
-                {stats?.matchesByAlert && activeAlerts.length > 0
-                  ? Math.round(stats.totalMatches / activeAlerts.length)
-                  : 0}
-              </p>
-              <p className="text-xs text-gray-500 mt-2">Średnia dopasowań</p>
+              <div>
+                <p className="text-gray-600 text-sm mb-1">Aktywne Alerty</p>
+                <p className="text-3xl font-bold text-blue-950">
+                  {activeAlerts.length}
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  Monitorują nowe oferty
+                </p>
+              </div>
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center md:justify-between gap-2">
                   <h2 className="text-xl font-bold text-blue-950 flex items-center gap-2">
                     <Activity size={24} className="text-purple-600" />
                     Ostatnie Dopasowania
@@ -233,8 +179,8 @@ function DashboardPage() {
                     onClick={() => navigate('/matches')}
                     className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
                   >
-                    Zobacz wszystkie
-                    <ArrowRight size={16} />
+                    <span className="hidden md:flex">Zobacz wszystkie</span>
+                    <SquareArrowOutUpRight size={16} />
                   </button>
                 </div>
               </div>
@@ -293,10 +239,6 @@ function DashboardPage() {
                             </span>
                           </div>
                         </div>
-                        <ArrowRight
-                          size={20}
-                          className="text-gray-400 mt-2 flex-shrink-0"
-                        />
                       </div>
                     </div>
                   ))
@@ -306,7 +248,7 @@ function DashboardPage() {
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center md:justify-between gap-1">
                   <h2 className="text-xl font-bold text-blue-950 flex items-center gap-2">
                     <Bell size={24} className="text-blue-600" />
                     Aktywne Alerty
@@ -315,8 +257,8 @@ function DashboardPage() {
                     onClick={() => navigate('/alerts')}
                     className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
                   >
-                    Zobacz wszystkie
-                    <ArrowRight size={16} />
+                    <span className="hidden md:flex">Zobacz wszystkie</span>
+                    <SquareArrowOutUpRight size={16} />
                   </button>
                 </div>
               </div>
@@ -372,10 +314,6 @@ function DashboardPage() {
                             </span>
                           </div>
                         </div>
-                        <ArrowRight
-                          size={20}
-                          className="text-gray-400 mt-2 flex-shrink-0"
-                        />
                       </div>
                     </div>
                   ))

@@ -8,6 +8,7 @@ import { ScraperThreadManagerService } from './services/scraper-thread-manager.s
 import { aiAddressExtractorService } from './services/ai-address-extractor.service';
 import { BrowserSetupService } from './services/browser-setup.service';
 import { ParameterParserService } from './services/parameter-parser.service';
+import { OtodomAuthService } from './services/otodom-auth.service';
 import { OlxExistingProcessor } from './processors/olx-existing.processor';
 import { OtodomExistingProcessor } from './processors/otodom-existing.processor';
 import { OlxNewProcessor } from './processors/olx-new.processor';
@@ -78,6 +79,7 @@ import { HeatmapModule } from '../heatmap/heatmap.module';
     aiAddressExtractorService,
     BrowserSetupService,
     ParameterParserService,
+    OtodomAuthService,
     OlxExistingProcessor,
     OtodomExistingProcessor,
     OlxNewProcessor,
@@ -87,6 +89,7 @@ import { HeatmapModule } from '../heatmap/heatmap.module';
     ScraperService,
     ScraperThreadManagerService,
     aiAddressExtractorService,
+    OtodomAuthService,
   ],
 })
 export class ScraperModule {}

@@ -163,7 +163,15 @@ if (!isMainThread && parentPort) {
       };
     } finally {
       if (browser) {
-        await browser.close();
+        try {
+          await browser.close();
+          console.log(`OLX Worker: Browser closed for page ${data.pageNum}`);
+        } catch (closeError) {
+          console.error(
+            `OLX Worker: Error closing browser for page ${data.pageNum}:`,
+            closeError,
+          );
+        }
       }
     }
   }
@@ -171,6 +179,7 @@ if (!isMainThread && parentPort) {
   scrapeOlxPage()
     .then((result) => {
       parentPort!.postMessage(result);
+      process.exit(0);
     })
     .catch((error) => {
       parentPort!.postMessage({
@@ -181,5 +190,6 @@ if (!isMainThread && parentPort) {
         pageNum: data.pageNum,
         source: 'olx',
       });
+      process.exit(1);
     });
 }

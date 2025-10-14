@@ -1,83 +1,87 @@
-import { useNavigate } from 'react-router-dom'
-import useUser from '../context/UserContext/useUser'
-import { useEffect, useState } from 'react'
-import { API_BASE_URL } from '../api/api'
-import Loading from './Loading'
+import { useNavigate } from "react-router-dom";
+import useUser from "../context/UserContext/useUser";
+import { useEffect, useState } from "react";
+import { CircleArrowRight, CircleArrowLeft } from "lucide-react";
+import Button from "./Button";
+import { editUser, getUserData } from "../api/api";
+import Loading from "./Loading";
 
 function UserProfile() {
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const { user, login } = useUser()
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const { user, login } = useUser();
+  const [formData, setFormData] = useState({
+    ...user,
+    phone: user?.phone || "",
+  });
 
   useEffect(() => {
-    if (!user) {
-      navigate('/', { replace: true })
+    if (!user && !sessionStorage.getItem("mieszkaniownik:token")) {
+      navigate("/", { replace: true });
     }
-  }, [user, navigate])
+  }, [user, navigate]);
 
-  const [email, setEmail] = useState(user?.email || '')
-  const [name, setName] = useState(user?.name || '')
-  const [surname, setSurname] = useState(user?.surname || '')
+  useEffect(() => {
+    setFormData({
+      ...user,
+      password: "",
+      repeatPassword: "",
+      phone: user?.phone || "",
+    });
+  }, [user]);
 
-  if (!user) return null
+  const nextStep = () => setPage(page + 1);
+  const prevStep = () => setPage(page - 1);
 
-  async function handleSave(e) {
-    e.preventDefault()
-    if (!window.confirm('Czy na pewno chcesz zaktualizować dane konta?')) return
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-    const formData = new FormData(e.target)
+  async function handleSubmit(event) {
+    event.preventDefault();
 
-    const updates = {}
-    if (formData.get('email') !== user.email)
-      updates.email = formData.get('email')
-    if (formData.get('name') !== user.name) updates.name = formData.get('name')
-    if (formData.get('surname') !== user.surname)
-      updates.surname = formData.get('surname')
+    setLoading(true);
 
-    if (Object.keys(updates).length === 0) {
-      alert('Brak zmian do zapisania.')
-      return
-    }
+    const resBody = { active: true };
 
-    setLoading(true)
-
-    try {
-      const token = localStorage.getItem('token')
-      const res = await fetch(`${API_BASE_URL}/users/${user.email}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(updates),
-      })
-
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.message || 'Błąd aktualizacji')
+    for (const key in formData) {
+      if (formData[key] && formData[key] !== user[key]) {
+        resBody[key] = formData[key];
       }
-
-      const updatedUser = await res.json()
-      alert('Dane konta zostały zmienione pomyślnie!')
-      login(updatedUser)
-      setEmail(updatedUser.email)
-      setName(updatedUser.name)
-      setSurname(updatedUser.surname)
-    } catch (err) {
-      alert(`Nie udało się zaktualizować danych: ${err.message}`)
-      console.error(err)
-    } finally {
-      setLoading(false)
     }
+
+    if (Object.keys(resBody).length === 1) {
+      alert("Brak zmian do zapisania");
+      setLoading(false);
+      return;
+    }
+
+    const saveOk = await editUser(resBody, user.email);
+    if (saveOk) {
+      login(await getUserData());
+      setPage(1);
+    }
+
+    setLoading(false);
+  }
+
+  if (!user && sessionStorage.getItem("mieszkaniownik:token")) {
+    return (
+      <main className="flex flex-1 justify-center items-center">
+        <Loading />
+      </main>
+    );
   }
 
   return (
-    <main className="w-full mt-18 flex justify-center items-center flex-col p-5">
+    <main className="w-full flex flex-1 justify-center items-center flex-col p-5 mt-16">
       <div className="flex flex-col justify-center items-center max-w-md w-full gap-1 p-4 h-auto">
-        <form
-          className="flex flex-col gap-6 w-full border-gray-200 rounded-xl border p-4 shadow-sm"
-          onSubmit={handleSave}
-        >
+        <div className="flex flex-col gap-4 w-full border-gray-200 rounded-xl border p-4 shadow-sm">
           <div className="gap-1 flex flex-col">
             <h1 className="font-semibold text-xl text-blue-950 ">
               Twoje konto
@@ -87,74 +91,163 @@ function UserProfile() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="email" className="font-medium text-blue-950">
-              Email:
-            </label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
-              required={true}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-            />
+          <div className="relative flex items-center gap-3 my-1">
+            <div className="flex-grow border-t border-gray-300"></div>
+            <span className="text-gray-500 text-sm">{`Strona ${page} z 2`}</span>
+            <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label htmlFor="name" className="font-medium text-blue-950">
-              Imię:
-            </label>
-            <input
-              id="name"
-              name="name"
-              type="text"
-              className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
-              required={true}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Jan"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <label htmlFor="surname" className="font-medium text-blue-950">
-              Nazwisko:
-            </label>
-            <input
-              id="surname"
-              name="surname"
-              type="text"
-              className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
-              required={true}
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-              placeholder="Nowak"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <button
-              type="submit"
-              className="cursor-pointer disabled:cursor-default disabled:opacity-50 rounded-lg border-solid border-1  p-2 text-white bg-blue-500 not-disabled:hover:bg-blue-600 transition-colors duration-300"
-              disabled={loading}
+          {page === 1 && (
+            <form
+              id="step1-form"
+              className="flex flex-col gap-4"
+              onSubmit={nextStep}
             >
-              Zapisz zmiany
-            </button>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="email" className="font-medium text-blue-950">
+                  Email:
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  required={true}
+                  placeholder="email@example.com"
+                />
+              </div>
 
-            <p className="text-gray-500 text-sm text-right w-full">
-              Konto utworzone:{' '}
-              <time dateTime={user.createdAt}>
-                {new Date(user.createdAt).toLocaleDateString('pl-PL')}
-              </time>
-            </p>
-          </div>
-        </form>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="username" className="font-medium text-blue-950">
+                  Nazwa użytkownika:
+                </label>
+                <input
+                  id="username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  type="text"
+                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  required={true}
+                  placeholder="Podaj nazwę użytkownika"
+                />
+              </div>
+
+              <Button
+                className="w-full cursor-pointer items-centers"
+                type="submit"
+              >
+                <span>Dalej</span>
+                <CircleArrowRight />
+              </Button>
+            </form>
+          )}
+
+          {page === 2 && (
+            <form
+              id="step2-form"
+              className="flex flex-col gap-4"
+              onSubmit={handleSubmit}
+            >
+              <div className="flex flex-col gap-1">
+                <label htmlFor="name" className="font-medium text-blue-950">
+                  Imię:
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  type="text"
+                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  required={true}
+                  placeholder="Jan"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="surname" className="font-medium text-blue-950">
+                  Nazwisko:
+                </label>
+                <input
+                  id="surname"
+                  name="surname"
+                  value={formData.surname}
+                  onChange={handleChange}
+                  type="text"
+                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  required={true}
+                  placeholder="Nowak"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="phone" className="font-medium text-blue-950">
+                  Numer telefonu:
+                </label>
+                <input
+                  id="phone"
+                  name="phone"
+                  value={formData.phone || ""}
+                  onChange={handleChange}
+                  type="tel"
+                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  placeholder="Podaj numer telefonu"
+                  pattern="[0-9+*#]*"
+                  title="Dozwolone znaki: cyfry, +, * i #"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label htmlFor="city" className="font-medium text-blue-950">
+                  Nazwa miasta:
+                </label>
+                <input
+                  id="city"
+                  name="city"
+                  value={formData.city}
+                  onChange={handleChange}
+                  type="text"
+                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  required={true}
+                  placeholder="Podaj miasto"
+                />
+              </div>
+
+              <div className="flex flex-row gap-1">
+                <Button
+                  type="button"
+                  className="w-full cursor-pointer items-centers"
+                  onClick={prevStep}
+                  disabled={loading}
+                >
+                  <CircleArrowLeft />
+                  <span>Wróć</span>
+                </Button>
+
+                <Button
+                  type="submit"
+                  loading={loading}
+                  className="w-full cursor-pointer"
+                >
+                  Zapisz zmiany
+                </Button>
+              </div>
+            </form>
+          )}
+
+          <p className="text-gray-500 text-sm text-right w-full">
+            Konto utworzone:{" "}
+            <time dateTime={user.createdAt}>
+              {new Date(user.createdAt).toLocaleDateString("pl-PL")}
+            </time>
+          </p>
+        </div>
       </div>
     </main>
-  )
+  );
 }
 
-export default UserProfile
+export default UserProfile;

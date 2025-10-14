@@ -177,8 +177,8 @@ model Alert {
   discordWebhook     String?            @db.Text
   notificationMethod NotificationMethod @default(EMAIL)
   status             AlertStatus        @default(ACTIVE)
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime           @default(now()) @db.Timestamptz
+  updatedAt          DateTime           @updatedAt @db.Timestamptz
   matchesCount       Int                @default(0) @db.Integer
 
   userId Int

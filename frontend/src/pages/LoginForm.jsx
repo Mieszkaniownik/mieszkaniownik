@@ -1,73 +1,40 @@
-import logo from '../assets/logo.png'
-import { useNavigate, Link } from 'react-router-dom'
-import useUser from '../context/UserContext/useUser'
-import { useEffect, useState } from 'react'
-import { API_BASE_URL } from '../api/api'
-import { ArrowUpIcon, Eye, EyeClosed } from 'lucide-react'
-import GoogleLoginButton from '../components/GoogleLoginButton'
-import Button from '../components/Button'
+import logo from "../assets/logo.png";
+import { useNavigate, Link } from "react-router-dom";
+import useUser from "../context/UserContext/useUser";
+import { useEffect, useState } from "react";
+import { authLogin } from "../api/api";
+import { ArrowUpIcon } from "lucide-react";
+import PasswordField from "../components/PasswordField";
+import Button from "../components/Button";
 
 function LoginForm() {
-  const navigate = useNavigate()
-  const [loading, setLoading] = useState(false)
-  const { user, login } = useUser()
-  const [showPassword, setShowPassword] = useState(false)
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const { user, login } = useUser();
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard', { replace: true })
+      navigate("/dashboard", { replace: true });
     }
-  }, [user, navigate])
+  }, [user, navigate]);
 
   async function handleSubmit(event) {
-    event.preventDefault()
+    event.preventDefault();
 
-    const formData = new FormData(event.target)
-    const email = formData.get('email')
-    const password = formData.get('password')
+    const formData = new FormData(event.target);
+    const email = formData.get("email");
+    const password = formData.get("password");
 
-    setLoading(true)
+    setLoading(true);
 
-    try {
-      const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
+    const userData = await authLogin({ email, password });
 
-      if (!loginRes.ok) {
-        const data = await loginRes.json()
-        throw new Error(data.message || 'Błąd logowania')
-      }
-
-      const loginData = await loginRes.json()
-      const token = loginData.token
-
-      localStorage.setItem('token', token)
-
-      const userRes = await fetch(`${API_BASE_URL}/users/${email}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-
-      if (!userRes.ok) {
-        throw new Error('Nie udało się pobrać danych użytkownika')
-      }
-
-      const userData = await userRes.json()
-
-      login(userData)
-      navigate('/profile', { replace: true })
-    } catch (err) {
-      alert(
-        'Błąd logowania: ' + (err.message || 'Nieprawidłowe dane logowania')
-      )
-      console.error(err)
-      localStorage.removeItem('token')
-    } finally {
-      setLoading(false)
+    if (userData) {
+      login(userData);
+      navigate("/dashboard", { replace: true });
     }
+
+    setLoading(false);
   }
 
   return (
@@ -75,7 +42,7 @@ function LoginForm() {
       <div className="flex flex-col gap-8 items-start w-full max-w-350">
         <button
           className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition-colors duration-300"
-          onClick={() => navigate('/')}
+          onClick={() => navigate("/")}
         >
           <ArrowUpIcon className="rotate-[-90deg]" />
           Powrót do strony głównej
@@ -99,7 +66,7 @@ function LoginForm() {
         </div>
 
         <form
-          className="flex flex-col gap-6 w-full border-gray-200 rounded-xl border p-4 shadow-sm"
+          className="flex flex-col gap-4 w-full border-gray-200 rounded-xl border p-4 shadow-sm"
           onSubmit={handleSubmit}
         >
           <div className="gap-1 flex flex-col">
@@ -125,32 +92,20 @@ function LoginForm() {
             <label htmlFor="password" className="font-medium text-blue-950">
               Hasło:
             </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                id="password"
-                name="password"
-                className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
-                placeholder="Twoje hasło"
-                required={true}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500"
-              >
-                {showPassword ? <Eye size={20} /> : <EyeClosed size={20} />}
-              </button>
-            </div>
+            <PasswordField />
           </div>
 
           <div className="flex flex-col gap-1">
-            <Button type="submit" loading={loading} className="w-full">
+            <Button
+              type="submit"
+              loading={loading}
+              className="w-full cursor-pointer"
+            >
               Zaloguj się
             </Button>
 
             <p className="text-gray-500 text-sm text-right w-full">
-              Nie masz konta?{' '}
+              Nie masz konta?{" "}
               <Link
                 to="/register"
                 className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
@@ -159,18 +114,10 @@ function LoginForm() {
               </Link>
             </p>
           </div>
-
-          <div className="relative flex items-center gap-3 my-2">
-            <div className="flex-grow border-t border-gray-300"></div>
-            <span className="text-gray-500 text-sm">lub</span>
-            <div className="flex-grow border-t border-gray-300"></div>
-          </div>
-
-          <GoogleLoginButton text="Zaloguj się przez Google" />
         </form>
       </div>
     </main>
-  )
+  );
 }
 
-export default LoginForm
+export default LoginForm;

@@ -6,7 +6,7 @@ function HomePage() {
   return (
     <>
       <Header />
-      <main className="w-full flex justify-center flex-grow flex-col min-h-[80vh]">
+      <main className="w-full flex justify-center flex-grow flex-col min-h-[80vh] mt-18">
         <Home />
       </main>
       <Footer />
