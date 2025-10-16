@@ -1,12 +1,73 @@
-# React + Vite
+<p align="center">
+  <img src="banner.png" alt="Mieszkaniownik Banner" width="100%"/>
+</p>
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> **Twój klucz do studenckiego mieszkania**
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### Frontend
 
-## Expanding the ESLint configuration
+[![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.1-646CFF?logo=vite)](https://vite.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+[![React Router](https://img.shields.io/badge/React_Router-7.9-CA4245?logo=reactrouter)](https://reactrouter.com/)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### Status
+
+[![Status](https://img.shields.io/badge/Status-Beta-orange)]()
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+## O Projekcie
+
+**Mieszkaniownik** to rozwiązanie skierowane dla studentów poszukujących mieszkania lub pokoju na wynajem. Przy obecnej rotacji ofert wynajmu np. na OLX każda sekunda jest na wagę złota. Po co przepatrywać godzinami odświeżając stronę internetową, jeśli możemy po prostu utworzyć alert, wpisać jakie mieszkanie nas interesuje i jaki mamy budżet? Następnie od razu po pokazaniu się oferty dostajesz powiadomienie na maila lub Discorda z wszystkimi najważniejszymi informacjami.
+
+### Grupa Docelowa
+
+Studenci poszukujący pokoju lub mieszkania
+
+### Wartość Dodana
+
+- **Zaoszczędzony czas** - automatyczne monitorowanie ofert zamiast ręcznego odświeżania
+- **Szybsze znalezienie mieszkania** - natychmiastowe powiadomienia o nowych ofertach
+- **Więcej ofert do wyboru** - agregacja z wielu źródeł
+- **Redukcja stresu** - żadnego strachu i stresu związanego z poszukiwaniem mieszkania
+
+## Application Features
+
+### Dashboard
+
+Monitor your apartment search with personalized statistics and recent matches.
+
+![Dashboard](dashboard1.png)
+
+### Matches
+
+Browse matched apartments that fit your alert criteria.
+
+![Matches](matches1.png)
+
+### Alerts
+
+Manage your apartment search alerts with custom filters.
+
+![Alerts](alerts1.png)
+
+### Notifications
+
+Stay informed with email notifications about new matching offers.
+
+![Email Notification](notifications1.png)
+
+### Heatmap
+
+Explore apartment density across the city with interactive heatmaps.
+
+![Heatmap Overview](heatmap1.png)
+![Heatmap Detailed View](heatmap2.png)
+
+### Main Page
+
+Welcome screen with quick access to all features.
+
+![Main Page](main1.png)

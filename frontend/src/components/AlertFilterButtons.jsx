@@ -1,8 +1,5 @@
 import PropTypes from 'prop-types'
 
-/**
- * Standardized button group for filtering by alert
- */
 function AlertFilterButtons({
   alerts = [],
   selectedAlertId,
@@ -10,6 +7,9 @@ function AlertFilterButtons({
   totalCount = 0,
   className = '',
 }) {
+  {
+    /* Render */
+  }
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>
       <button

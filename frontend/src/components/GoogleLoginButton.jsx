@@ -3,13 +3,22 @@ import { API_BASE_URL } from '../api/api'
 import Skeleton from './Skeleton'
 
 function GoogleLoginButton({ text = 'Zaloguj się przez Google' }) {
+  {
+    /* State */
+  }
   const [available, setAvailable] = useState(false)
   const [loading, setLoading] = useState(true)
 
+  {
+    /* Effects */
+  }
   useEffect(() => {
     checkGoogleAvailability()
   }, [])
 
+  {
+    /* API Calls */
+  }
   async function checkGoogleAvailability() {
     try {
       const res = await fetch(`${API_BASE_URL}/auth/google/available`)
@@ -23,18 +32,30 @@ function GoogleLoginButton({ text = 'Zaloguj się przez Google' }) {
     }
   }
 
+  {
+    /* Handlers */
+  }
   function handleGoogleLogin() {
     window.location.href = `${API_BASE_URL}/auth/google`
   }
 
+  {
+    /* Render - Loading State */
+  }
   if (loading) {
     return <Skeleton className="w-full h-12 rounded-lg" />
   }
 
+  {
+    /* Render - Not Available */
+  }
   if (!available) {
     return null
   }
 
+  {
+    /* Render - Main */
+  }
   return (
     <button
       onClick={handleGoogleLogin}

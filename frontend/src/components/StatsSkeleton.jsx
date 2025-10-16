@@ -1,6 +1,9 @@
-import Skeleton from "./Skeleton";
+import Skeleton from './Skeleton'
 
 function StatsSkeleton() {
+  {
+    /* Render */
+  }
   return (
     <div className="w-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
       {[1, 2, 3].map((i) => (
@@ -10,7 +13,7 @@ function StatsSkeleton() {
         </div>
       ))}
     </div>
-  );
+  )
 }
 
-export default StatsSkeleton;
+export default StatsSkeleton

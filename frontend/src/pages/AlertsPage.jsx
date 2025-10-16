@@ -26,13 +26,23 @@ import {
 } from '../utils/filterSortConfig'
 
 function AlertsPage() {
+  {
+    /* Hooks */
+  }
   const navigate = useNavigate()
   const { user } = useUser()
+
+  {
+    /* State */
+  }
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [actionLoading, setActionLoading] = useState({})
 
+  {
+    /* Filters */
+  }
   const {
     filters,
     showFilters,
@@ -48,6 +58,9 @@ function AlertsPage() {
     sortBy: DEFAULT_SORT.ALERTS,
   })
 
+  {
+    /* API Calls */
+  }
   const fetchAlerts = useCallback(async () => {
     try {
       const params = new URLSearchParams()
@@ -79,6 +92,9 @@ function AlertsPage() {
     }
   }, [filters])
 
+  {
+    /* Effects */
+  }
   useEffect(() => {
     if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
       navigate('/login', { replace: true })
@@ -87,6 +103,9 @@ function AlertsPage() {
     fetchAlerts()
   }, [user, navigate, fetchAlerts])
 
+  {
+    /* Handlers */
+  }
   async function handleToggleStatus(alertId) {
     setActionLoading((prev) => ({ ...prev, [alertId]: 'toggle' }))
     try {
@@ -127,6 +146,9 @@ function AlertsPage() {
     }
   }
 
+  {
+    /* Computed Values */
+  }
   const uniqueCities = [...new Set(alerts.map((alert) => alert.city))].sort()
 
   const activeFiltersList = getActiveFilters({
@@ -144,6 +166,9 @@ function AlertsPage() {
     },
   })
 
+  {
+    /* Render - Loading State */
+  }
   if (loading) {
     return (
       <>
@@ -173,6 +198,9 @@ function AlertsPage() {
     )
   }
 
+  {
+    /* Render - Main */
+  }
   return (
     <>
       <Header />

@@ -1,13 +1,19 @@
-import { Link } from "react-router-dom";
-import { X } from "lucide-react";
-import Logo from "./Logo";
-import { menuItems } from "../constants/menuItems";
+import { Link } from 'react-router-dom'
+import { X } from 'lucide-react'
+import Logo from './Logo'
+import { menuItems } from '../constants/menuItems'
 
 function MobileMenu({ setMenuOpen, user }) {
+  {
+    /* Handlers */
+  }
   const closeMenu = () => {
-    setMenuOpen(false);
-  };
+    setMenuOpen(false)
+  }
 
+  {
+    /* Render */
+  }
   return (
     <menu className="fixed top-0 left-0 w-full min-h-screen bg-blue-950 text-white p-6 flex flex-col z-50">
       <div className="flex flex-row justify-between items-center">
@@ -28,7 +34,7 @@ function MobileMenu({ setMenuOpen, user }) {
           ))}
       </ul>
     </menu>
-  );
+  )
 }
 
-export default MobileMenu;
+export default MobileMenu

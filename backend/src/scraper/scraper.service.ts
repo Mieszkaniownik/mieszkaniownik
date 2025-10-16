@@ -26,7 +26,11 @@ export class ScraperService implements OnModuleInit {
   private readonly defaultSortOrder = SortOrder.NEWEST;
 
   constructor(
-    @InjectQueue('scraper') private readonly scraperQueue: Queue,
+    @InjectQueue('olx-existing') private readonly olxExistingQueue: Queue,
+    @InjectQueue('otodom-existing')
+    private readonly otodomExistingQueue: Queue,
+    @InjectQueue('olx-new') private readonly olxNewQueue: Queue,
+    @InjectQueue('otodom-new') private readonly otodomNewQueue: Queue,
     private readonly aiExtractor: aiAddressExtractorService,
     private readonly threadManager: ScraperThreadManagerService,
     private readonly databaseService: DatabaseService,
@@ -281,7 +285,7 @@ export class ScraperService implements OnModuleInit {
 
       for (const offerUrl of otodomOffers) {
         try {
-          await this.scraperQueue.add(
+          await this.otodomExistingQueue.add(
             'processOffer',
             { url: offerUrl },
             {
@@ -367,7 +371,19 @@ export class ScraperService implements OnModuleInit {
         `Attempting to queue ${offerType} offer: ${offerUrl} with priority ${priority}`,
       );
 
-      const job = await this.scraperQueue.add(
+      const isOtodom = offerUrl.includes('otodom.pl');
+      let targetQueue: Queue;
+      let queueName: string;
+
+      if (isOtodom) {
+        targetQueue = isNew ? this.otodomNewQueue : this.otodomExistingQueue;
+        queueName = isNew ? 'otodom-new' : 'otodom-existing';
+      } else {
+        targetQueue = isNew ? this.olxNewQueue : this.olxExistingQueue;
+        queueName = isNew ? 'olx-new' : 'olx-existing';
+      }
+
+      const job = await targetQueue.add(
         'processOffer',
         { url: offerUrl, isNew: isNew },
         {
@@ -382,13 +398,13 @@ export class ScraperService implements OnModuleInit {
       );
 
       this.logger.log(
-        `Successfully queued ${offerType} job ID: ${job.id} for URL: ${offerUrl}`,
+        `Successfully queued ${offerType} job ID: ${job.id} to ${queueName} for URL: ${offerUrl}`,
       );
 
       if (isNew) {
-        const queueStatus = await this.scraperQueue.getJobCounts();
+        const queueStatus = await targetQueue.getJobCounts();
         this.logger.log(
-          `Queue status after new offer: ${JSON.stringify(queueStatus)}`,
+          `Queue status for ${queueName} after new offer: ${JSON.stringify(queueStatus)}`,
         );
       }
     } catch (error) {
