@@ -4,19 +4,11 @@
 
 > **Twój klucz do studenckiego mieszkania**
 
-## Tech Stack
+### Frontend: [![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)](https://react.dev/) [![Vite](https://img.shields.io/badge/Vite-7.1-646CFF?logo=vite)](https://vite.dev/) [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-06B6D4?logo=tailwindcss)](https://tailwindcss.com/) [![React Router](https://img.shields.io/badge/React_Router-7.9-CA4245?logo=reactrouter)](https://reactrouter.com/)
 
-### Frontend
+### DevOps: [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://www.docker.com/) [![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-326CE5?logo=kubernetes)](https://kubernetes.io/) [![Nginx](https://img.shields.io/badge/Nginx-Latest-009639?logo=nginx)](https://nginx.org/)
 
-[![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)](https://react.dev/)
-[![Vite](https://img.shields.io/badge/Vite-7.1-646CFF?logo=vite)](https://vite.dev/)
-[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
-[![React Router](https://img.shields.io/badge/React_Router-7.9-CA4245?logo=reactrouter)](https://reactrouter.com/)
-
-### Status
-
-[![Status](https://img.shields.io/badge/Status-Beta-orange)]()
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+### Status: [![Status](https://img.shields.io/badge/Status-Beta-orange)]() [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 ## O Projekcie
 
