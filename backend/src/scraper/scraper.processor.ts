@@ -1,16 +1,16 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import type { Job } from 'bullmq';
-import * as puppeteer from 'puppeteer';
+import { Injectable, Logger } from '@nestjs/common';
+import type { Page } from 'puppeteer';
 import { BuildingType } from '@prisma/client';
 import { DatabaseService } from '../database/database.service';
 import { MatchService } from '../match/match.service';
 import { ScraperService } from './scraper.service';
 import { StreetNameCleaner } from './services/street-name-cleaner';
-import { GeocodingService } from '../heatmap/geocoding.service';
+import { ScraperGeocodingService } from './services/scraper-geocoding.service';
 import { aiAddressExtractorService } from './services/ai-address-extractor.service';
 import { BrowserSetupService } from './services/browser-setup.service';
 import { ParameterParserService } from './services/parameter-parser.service';
+import { OfferService } from '../offer/offer.service';
+import { ScraperOfferMapperService } from './services/scraper-offer-mapper.service';
 
 type ScrapedDetails = Record<string, string>;
 
@@ -39,21 +39,21 @@ type OtodomScrapedData = ScrapedData & {
   views: number;
 };
 
-@Processor('scraper')
-export class ScraperProcessor extends WorkerHost {
+@Injectable()
+export class ScraperProcessor {
   private readonly logger = new Logger(ScraperProcessor.name);
 
   constructor(
+    private readonly offerService: OfferService,
+    private readonly mapperService: ScraperOfferMapperService,
     private readonly databaseService: DatabaseService,
     private readonly matchService: MatchService,
     private readonly scraperService: ScraperService,
-    private readonly geocodingService: GeocodingService,
+    private readonly geocodingService: ScraperGeocodingService,
     private readonly googleAiService: aiAddressExtractorService,
     private readonly browserSetup: BrowserSetupService,
     private readonly paramParser: ParameterParserService,
-  ) {
-    super();
-  }
+  ) {}
 
   private async generateSummary(
     title: string,
@@ -78,164 +78,10 @@ export class ScraperProcessor extends WorkerHost {
     address: string,
     city?: string,
   ): Promise<{ latitude: number | null; longitude: number | null }> {
-    try {
-      const fullAddress =
-        city && !address.includes(city) ? `${address}, ${city}` : address;
-
-      this.logger.debug(`Geocoding address: ${fullAddress}`);
-
-      const result = await this.geocodingService.geocodeAddress(fullAddress);
-
-      if (result) {
-        this.logger.log(
-          `Successfully geocoded "${fullAddress}" -> lat: ${result.lat}, lng: ${result.lng}`,
-        );
-        return {
-          latitude: result.lat,
-          longitude: result.lng,
-        };
-      } else {
-        this.logger.warn(`Failed to geocode address: ${fullAddress}`);
-        return { latitude: null, longitude: null };
-      }
-    } catch (error) {
-      this.logger.warn(
-        `Geocoding error for "${address}": ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-      return { latitude: null, longitude: null };
-    }
+    return this.geocodingService.geocodeAddress(address, city);
   }
 
-  async process(job: Job<{ url: string; isNew?: boolean }>) {
-    if (job.name !== 'processOffer') {
-      return;
-    }
-
-    const isNew = job.data.isNew || false;
-    const priority = isNew ? 'NEW' : 'EXISTING';
-
-    this.logger.log(
-      `PROCESSOR: Starting ${priority} job ${job.id} for URL: ${job.data.url}`,
-    );
-
-    if (job.data.url.includes('otodom.pl')) {
-      this.logger.log(`PROCESSOR: Detected OTODOM URL - ${job.data.url}`);
-    } else {
-      this.logger.log(`PROCESSOR: Detected OLX URL - ${job.data.url}`);
-    }
-
-    let browser: puppeteer.Browser | null = null;
-    let page: puppeteer.Page | null = null;
-
-    try {
-      browser = await this.browserSetup.createBrowser();
-      const isOtodom = job.data.url.includes('otodom.pl');
-
-      if (isOtodom) {
-        this.logger.log(
-          `Setting up page with Otodom authentication for: ${job.data.url}`,
-        );
-      }
-
-      page = await this.browserSetup.setupPage(browser, isOtodom);
-
-      const navigationTimeout = isOtodom ? 60000 : 30000;
-
-      try {
-        await page.goto(job.data.url, {
-          waitUntil: 'networkidle0',
-          timeout: navigationTimeout,
-        });
-      } catch (navError) {
-        this.logger.warn(
-          `Navigation with networkidle0 failed, retrying with domcontentloaded: ${navError instanceof Error ? navError.message : 'Unknown error'}`,
-        );
-        await page.goto(job.data.url, {
-          waitUntil: 'domcontentloaded',
-          timeout: navigationTimeout,
-        });
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-      }
-
-      const pageContent = await page.content();
-      if (
-        pageContent.includes('403 ERROR') ||
-        pageContent.includes('Request blocked') ||
-        pageContent.includes('cloudfront')
-      ) {
-        this.logger.error(
-          `CloudFront blocked request for ${job.data.url}. Authentication cookies applied but bot detection triggered.`,
-        );
-        this.logger.warn(
-          `This is a known limitation - Otodom's WAF blocks automated browsers even with valid authentication.`,
-        );
-        throw new Error(
-          'CloudFront 403: Request blocked by Otodom bot protection',
-        );
-      }
-
-      await page.evaluate(() => {
-        return new Promise<void>((resolve) => {
-          let totalHeight = 0;
-          const distance = 100;
-          const timer = setInterval(() => {
-            const scrollHeight = document.body.scrollHeight;
-            window.scrollBy(0, distance);
-            totalHeight += distance;
-
-            if (totalHeight >= scrollHeight) {
-              clearInterval(timer);
-
-              window.scrollTo(0, 0);
-              resolve();
-            }
-          }, 100);
-        });
-      });
-
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      const currentUrl = page.url();
-      if (currentUrl.includes('otodom.pl')) {
-        await this.processOtodomOffer(page, currentUrl, isNew);
-      } else {
-        await this.processOlxOffer(page, currentUrl, isNew);
-      }
-    } catch (error) {
-      this.logger.error(
-        `Error processing offer ${job.data.url}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-      throw error;
-    } finally {
-      try {
-        if (page) {
-          await page.close();
-          this.logger.debug(`Closed page for ${job.data.url}`);
-        }
-      } catch (closeError) {
-        this.logger.warn(
-          `Failed to close page for ${job.data.url}: ${closeError instanceof Error ? closeError.message : 'Unknown error'}`,
-        );
-      }
-
-      try {
-        if (browser) {
-          await this.browserSetup.closeBrowser(browser);
-          this.logger.debug(`Closed browser for ${job.data.url}`);
-        }
-      } catch (closeError) {
-        this.logger.warn(
-          `Failed to close browser for ${job.data.url}: ${closeError instanceof Error ? closeError.message : 'Unknown error'}`,
-        );
-      }
-    }
-  }
-
-  private async processOlxOffer(
-    page: puppeteer.Page,
-    url: string,
-    isNew = false,
-  ) {
+  public async processOlxOffer(page: Page, url: string, isNew = false) {
     try {
       const pageDebug = await page.evaluate(() => {
         const allSpans = Array.from(document.querySelectorAll('span'));
@@ -466,11 +312,11 @@ export class ScraperProcessor extends WorkerHost {
                 );
               }
             } else {
-              dateDebug.push(`✗ Date regex did not match: "${normalizedDate}"`);
+              dateDebug.push(`Date regex did not match: "${normalizedDate}"`);
             }
           }
         } else {
-          dateDebug.push('✗ No date text found');
+          dateDebug.push('No date text found');
         }
 
         dateDebug.push(`=== FINAL createdAt: ${createdAt} ===`);
@@ -756,140 +602,72 @@ export class ScraperProcessor extends WorkerHost {
         );
       }
 
-      const existingOffer = await this.databaseService.offer.findUnique({
-        where: { link: url },
+      const validCity =
+        data.city && data.city.trim() !== '' ? data.city.trim() : 'Nieznane';
+
+      const finalCreatedAt = data.createdAt
+        ? new Date(data.createdAt)
+        : new Date();
+
+      const contactString = data.contact?.name
+        ? `${data.contact.name}${data.contact.memberSince ? ` - Na OLX od ${data.contact.memberSince}` : ''}${data.contact.lastSeen ? ` - ${data.contact.lastSeen}` : ''}`
+        : findParamValue('kontakt') || null;
+
+      const summary = await this.generateSummary(
+        data.title || '',
+        data.description || '',
+      );
+
+      console.log('Final boolean values before OfferService:', {
+        elevator: parsed.elevator,
+        pets: parsed.pets,
+        furniture: parsed.furniture,
+        title: data.title,
       });
 
-      let createdOffer: { id: number } | null = null;
+      const offerDto = this.mapperService.mapOlxToCreateOfferDto({
+        url: url,
+        title: data.title || '',
+        price: data.price || 0,
+        city: validCity,
+        district: data.district || null,
+        footage: parsed.footage || 0,
+        description: data.description || '',
+        summary: summary,
+        street: extractedStreet,
+        streetNumber: extractedStreetNumber,
+        latitude: latitude,
+        longitude: longitude,
+        rooms: parsed.rooms ? parseInt(parsed.rooms) : null,
+        floor: parsed.floor ? parseInt(parsed.floor) : null,
+        furniture: parsed.furniture,
+        elevator: parsed.elevator,
+        pets: parsed.pets,
+        negotiable: data.negotiable || false,
+        ownerType: parsed.ownerType,
+        buildingType: parsed.buildingType,
+        parkingType: parsed.parkingType,
+        rentAdditional: parsed.rentAdditional,
+        contact: contactString,
+        views: data.views,
+        createdAt: finalCreatedAt,
+        isNew: isNew,
+        images: data.images || [],
+        infoAdditional: findParamValue('informacje dodatkowe') || null,
+        furnishing: findParamValue('wyposażenie') || null,
+        media: findParamValue('media') || null,
+      });
 
-      if (existingOffer) {
-        const previousViews = existingOffer.views;
-        const newViews = data.views || existingOffer.views;
+      const { offer: createdOffer, created } =
+        await this.offerService.findOneOrCreate(offerDto);
 
-        console.log('Final boolean values before database update:', {
-          elevator: parsed.elevator,
-          pets: parsed.pets,
-          furniture: parsed.furniture,
-          title: data.title || existingOffer.title,
-        });
+      this.logger.log(
+        `${created ? 'Created' : 'Updated'} OLX offer ${createdOffer.id} for ${url} - Views: ${data.views}`,
+      );
 
-        createdOffer = await this.databaseService.offer.update({
-          where: { link: url },
-          data: {
-            title: data.title || existingOffer.title,
-            price: data.price || existingOffer.price,
-            footage: parsed.footage || existingOffer.footage,
-            city:
-              data.city && data.city.trim() !== ''
-                ? data.city.trim()
-                : existingOffer.city || 'Nieznane',
-            district: data.district || existingOffer.district,
-            street: extractedStreet || existingOffer.street,
-            streetNumber: extractedStreetNumber || existingOffer.streetNumber,
-            latitude: latitude ?? existingOffer.latitude,
-            longitude: longitude ?? existingOffer.longitude,
-            description: data.description || existingOffer.description,
-            summary:
-              (await this.generateSummary(
-                data.title || existingOffer.title,
-                data.description || existingOffer.description,
-              )) || existingOffer.summary,
-            rooms: parsed.rooms ? parseInt(parsed.rooms) : existingOffer.rooms,
-            floor: parsed.floor ? parseInt(parsed.floor) : existingOffer.floor,
-            furniture: parsed.furniture ?? existingOffer.furniture,
-            elevator: parsed.elevator ?? existingOffer.elevator,
-            pets: parsed.pets ?? existingOffer.pets,
-            negotiable: data.negotiable ?? existingOffer.negotiable,
-            ownerType: parsed.ownerType ?? existingOffer.ownerType,
-            parkingType: parsed.parkingType ?? existingOffer.parkingType,
-            rentAdditional:
-              parsed.rentAdditional ?? existingOffer.rentAdditional,
-            views: newViews,
-            images:
-              data.images && data.images.length > 0
-                ? data.images
-                : existingOffer.images,
-            contact: data.contact?.name
-              ? `${data.contact.name}${data.contact.memberSince ? ` - Na OLX od ${data.contact.memberSince}` : ''}${data.contact.lastSeen ? ` - ${data.contact.lastSeen}` : ''}`
-              : findParamValue('kontakt') || existingOffer.contact,
-            infoAdditional:
-              findParamValue('informacje dodatkowe') ??
-              existingOffer.infoAdditional,
-            furnishing:
-              findParamValue('wyposażenie') ?? existingOffer.furnishing,
-            media: findParamValue('media') ?? existingOffer.media,
-            updatedAt: new Date(),
-          },
-        });
-
-        this.logger.log(
-          `Updated offer ${existingOffer.id} views: ${previousViews} → ${newViews} (${newViews > previousViews ? `+${newViews - previousViews}` : 'no change'})`,
-        );
+      if (!created) {
         this.logger.debug(
-          `Updated existing offer ${existingOffer.id} for URL: ${url}`,
-        );
-      } else {
-        const validCity =
-          data.city && data.city.trim() !== '' ? data.city.trim() : 'Nieznane';
-        if (validCity === 'Nieznane') {
-          this.logger.warn(
-            `Creating OLX offer with fallback city "${validCity}" (original: "${data.city}") for URL: ${url}`,
-          );
-        }
-
-        const finalCreatedAt = data.createdAt
-          ? new Date(data.createdAt)
-          : new Date();
-        this.logger.log(
-          `Saving offer with createdAt: ${finalCreatedAt.toISOString()} (from extracted: ${data.createdAt || 'NULL'})`,
-        );
-
-        createdOffer = await this.databaseService.offer.create({
-          data: {
-            link: url,
-            title: data.title || '',
-            buildingType: parsed.buildingType,
-            price: data.price || 0,
-            footage: parsed.footage || 0,
-            city: validCity,
-            district: data.district || null,
-            street: extractedStreet,
-            streetNumber: extractedStreetNumber,
-            latitude: latitude,
-            longitude: longitude,
-            description: data.description || '',
-            summary: await this.generateSummary(
-              data.title || '',
-              data.description || '',
-            ),
-            rooms: parsed.rooms ? parseInt(parsed.rooms) : null,
-            floor: parsed.floor ? parseInt(parsed.floor) : null,
-            furniture: parsed.furniture,
-            elevator: parsed.elevator,
-            pets: parsed.pets,
-            ownerType: parsed.ownerType,
-            parkingType: parsed.parkingType,
-            rentAdditional: parsed.rentAdditional,
-            source: 'olx',
-            negotiable: data.negotiable || false,
-            createdAt: finalCreatedAt,
-            views: data.views,
-            images: data.images || [],
-            contact: data.contact?.name
-              ? `${data.contact.name}${data.contact.memberSince ? ` - Na OLX od ${data.contact.memberSince}` : ''}${data.contact.lastSeen ? ` - ${data.contact.lastSeen}` : ''}`
-              : findParamValue('kontakt') || null,
-            infoAdditional: findParamValue('informacje dodatkowe') || null,
-            furnishing: findParamValue('wyposażenie') || null,
-            media: findParamValue('media') || null,
-            isNew: isNew,
-          },
-        });
-
-        this.logger.log(
-          `Created new offer ${createdOffer.id} with ${data.views} views (method: ${extractionData.viewsExtractionMethod})`,
-        );
-        this.logger.debug(
-          `Created new offer ${createdOffer.id} for URL: ${url}`,
+          `Updated existing offer ${createdOffer.id} for URL: ${url}`,
         );
       }
 
@@ -920,11 +698,7 @@ export class ScraperProcessor extends WorkerHost {
     }
   }
 
-  private async processOtodomOffer(
-    page: puppeteer.Page,
-    url: string,
-    isNew = false,
-  ) {
+  public async processOtodomOffer(page: Page, url: string, isNew = false) {
     try {
       const data = await page.evaluate(() => {
         const priceElement =
@@ -983,7 +757,7 @@ export class ScraperProcessor extends WorkerHost {
             viewsDebug.push(`  Extracted views: ${views}`);
           }
         } else {
-          viewsDebug.push('Method 1: ✗ Views element not found');
+          viewsDebug.push('Method 1: Views element not found');
 
           const statsContainer = document.querySelector(
             '.css-1jzjbfr.e3km50a0, .e3km50a0',
@@ -1001,7 +775,7 @@ export class ScraperProcessor extends WorkerHost {
               viewsDebug.push('  No views pattern found in container');
             }
           } else {
-            viewsDebug.push('Method 2: ✗ Statistics container not found');
+            viewsDebug.push('Method 2: Statistics container not found');
           }
         }
 
@@ -1603,114 +1377,60 @@ export class ScraperProcessor extends WorkerHost {
 
       const ownerType = this.paramParser.parseOwnerType(data.details);
 
-      const existingOffer = await this.databaseService.offer.findUnique({
-        where: { link: url },
+      const city = address[address.length - 2]?.trim() || 'Nieznane';
+      const district = address[address.length - 3]?.trim() || null;
+
+      const finalCreatedAt = data.createdAt
+        ? new Date(data.createdAt)
+        : new Date();
+
+      const summary = await this.generateSummary(
+        data.title || '',
+        data.description || '',
+      );
+
+      const offerDto = this.mapperService.mapOtodomToCreateOfferDto({
+        url: url,
+        title: data.title || '',
+        price: priceValue,
+        city: city,
+        district: district,
+        footage:
+          this.paramParser.parseOtodomFootage(data.footage, data.details) || 0,
+        description: data.description || '',
+        summary: summary,
+        street: extractedStreet,
+        streetNumber: extractedStreetNumber,
+        latitude: latitude,
+        longitude: longitude,
+        rooms:
+          parseInt(data.details['liczba pokoi'] || data.details['pokoi']) ||
+          null,
+        floor: parseInt(data.details['piętro']) || null,
+        furniture: furniture,
+        elevator: elevator,
+        ownerType: ownerType,
+        buildingType: BuildingType.APARTMENT,
+        contact: typeof data.contact === 'string' ? data.contact : null,
+        views: data.views || 0,
+        createdAt: finalCreatedAt,
+        isNew: isNew,
+        images: data.images || [],
+        infoAdditional: data.details['informacje dodatkowe'] || null,
+        furnishing: data.details['wyposażenie'] || null,
+        media: data.details['media'] || null,
       });
 
-      let createdOffer: { id: number } | null = null;
+      const { offer: createdOffer, created } =
+        await this.offerService.findOneOrCreate(offerDto);
 
-      if (existingOffer) {
-        const previousViews = existingOffer.views;
-        const newViews = data.views || 0;
+      this.logger.log(
+        `${created ? 'Created' : 'Updated'} Otodom offer ${createdOffer.id} for ${url} - Views: ${data.views || 0}`,
+      );
 
-        createdOffer = await this.databaseService.offer.update({
-          where: { link: url },
-          data: {
-            title: data.title || existingOffer.title,
-            price: priceValue || existingOffer.price,
-            footage:
-              this.paramParser.parseOtodomFootage(data.footage, data.details) ||
-              existingOffer.footage,
-            city:
-              address[address.length - 2]?.trim() ||
-              existingOffer.city ||
-              'Nieznane',
-            district:
-              address[address.length - 3]?.trim() || existingOffer.district,
-            street: extractedStreet || existingOffer.street,
-            streetNumber: extractedStreetNumber || existingOffer.streetNumber,
-            latitude: latitude ?? existingOffer.latitude,
-            longitude: longitude ?? existingOffer.longitude,
-            description: data.description || existingOffer.description,
-            rooms:
-              parseInt(data.details['liczba pokoi'] || data.details['pokoi']) ||
-              existingOffer.rooms,
-            floor: parseInt(data.details['piętro']) || existingOffer.floor,
-            furniture: furniture ?? existingOffer.furniture,
-            elevator: elevator ?? existingOffer.elevator,
-            ownerType: ownerType ?? existingOffer.ownerType,
-            contact:
-              typeof data.contact === 'string'
-                ? data.contact
-                : existingOffer.contact,
-            infoAdditional:
-              data.details['informacje dodatkowe'] ??
-              existingOffer.infoAdditional,
-            furnishing: data.details['wyposażenie'] ?? existingOffer.furnishing,
-            media: data.details['media'] ?? existingOffer.media,
-            updatedAt: new Date(),
-            views: newViews,
-          },
-        });
-
-        this.logger.log(
-          `Updated Otodom offer ${existingOffer.id} views: ${previousViews} → ${newViews} (${newViews > previousViews ? `+${newViews - previousViews}` : 'no change'})`,
-        );
+      if (!created) {
         this.logger.debug(
-          `Updated existing Otodom offer ${existingOffer.id} for URL: ${url}`,
-        );
-      } else {
-        const finalCreatedAt = data.createdAt
-          ? new Date(data.createdAt)
-          : new Date();
-        this.logger.log(
-          `Creating Otodom offer with createdAt: ${finalCreatedAt.toISOString()} (from extracted: ${data.createdAt || 'NULL'})`,
-        );
-
-        createdOffer = await this.databaseService.offer.create({
-          data: {
-            link: url,
-            title: data.title || '',
-            buildingType: BuildingType.APARTMENT,
-            price: priceValue,
-            footage:
-              this.paramParser.parseOtodomFootage(data.footage, data.details) ||
-              0,
-            city: address[address.length - 2]?.trim() || 'Nieznane',
-            district: address[address.length - 3]?.trim() || null,
-            street: extractedStreet,
-            streetNumber: extractedStreetNumber,
-            latitude: latitude,
-            longitude: longitude,
-            description: data.description || '',
-            summary: await this.generateSummary(
-              data.title || '',
-              data.description || '',
-            ),
-            rooms:
-              parseInt(data.details['liczba pokoi'] || data.details['pokoi']) ||
-              null,
-            floor: parseInt(data.details['piętro']) || null,
-            furniture: furniture,
-            elevator: elevator,
-            ownerType: ownerType,
-            contact: typeof data.contact === 'string' ? data.contact : null,
-            infoAdditional: data.details['informacje dodatkowe'] || null,
-            furnishing: data.details['wyposażenie'] || null,
-            media: data.details['media'] || null,
-            source: 'otodom',
-            createdAt: finalCreatedAt,
-            views: data.views || 0,
-            images: data.images || [],
-            isNew: isNew,
-          },
-        });
-
-        this.logger.log(
-          `Created new Otodom offer ${createdOffer.id} with ${data.views || 0} views and createdAt: ${finalCreatedAt.toISOString()}`,
-        );
-        this.logger.debug(
-          `Created new Otodom offer ${createdOffer.id} for URL: ${url}`,
+          `Updated existing Otodom offer ${createdOffer.id} for URL: ${url}`,
         );
       }
 

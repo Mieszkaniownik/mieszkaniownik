@@ -1,7 +1,8 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger, OnModuleInit } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { ScraperProcessor } from '../scraper.processor';
+import { OlxScraperService } from '../services/olx-scraper.service';
+import { BrowserSetupService } from '../services/browser-setup.service';
 
 @Processor('olx-new', {
   concurrency: 3,
@@ -10,7 +11,10 @@ import { ScraperProcessor } from '../scraper.processor';
 export class OlxNewProcessor extends WorkerHost implements OnModuleInit {
   private readonly logger = new Logger(OlxNewProcessor.name);
 
-  constructor(private readonly scraperProcessor: ScraperProcessor) {
+  constructor(
+    private readonly olxScraperService: OlxScraperService,
+    private readonly browserSetup: BrowserSetupService,
+  ) {
     super();
   }
 
@@ -24,10 +28,20 @@ export class OlxNewProcessor extends WorkerHost implements OnModuleInit {
     );
 
     try {
-      await this.scraperProcessor.process(job);
-      this.logger.log(`Successfully processed OLX offer: ${job.data.url}`);
+      await this.browserSetup.scrapeWithBrowser(
+        job.data.url,
+        false,
+        async (page) => {
+          await this.olxScraperService.processOffer(page, job.data.url, true);
+        },
+      );
+
+      this.logger.log(`Successfully processed NEW OLX offer: ${job.data.url}`);
     } catch (error) {
-      this.logger.error(`Failed to process OLX offer: ${job.data.url}`, error);
+      this.logger.error(
+        `Failed to process NEW OLX offer: ${job.data.url}`,
+        error,
+      );
       throw error;
     }
   }

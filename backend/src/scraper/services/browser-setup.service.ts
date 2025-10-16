@@ -175,36 +175,32 @@ export class BrowserSetupService implements OnModuleDestroy {
 
     if (forOtodom && this.otodomAuth.isAuthConfigured()) {
       try {
-        this.logger.log(
-          '🔐 Attempting to apply Otodom authentication cookies...',
-        );
+        this.logger.log('Attempting to apply Otodom authentication cookies...');
         const authenticated = await this.otodomAuth.applyCookiesToPage(page);
         if (authenticated) {
           this.logger.log(
-            '✅ Successfully applied Otodom authentication cookies to page',
+            'Successfully applied Otodom authentication cookies to page',
           );
         } else {
           this.logger.warn(
-            '⚠️  Otodom authentication cookies not available or expired',
+            'Otodom authentication cookies not available or expired',
           );
           this.logger.warn(
-            '💡 Page will load without authentication - may receive limited content',
+            'Page will load without authentication - may receive limited content',
           );
         }
       } catch (error) {
         this.logger.error(
-          `❌ Failed to apply Otodom auth cookies: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          `Failed to apply Otodom auth cookies: ${error instanceof Error ? error.message : 'Unknown error'}`,
         );
         this.logger.warn(
-          '💡 Continuing without authentication - CloudFront may block or limit content',
+          'Continuing without authentication - CloudFront may block or limit content',
         );
       }
     } else if (forOtodom) {
+      this.logger.warn('Otodom authentication requested but not configured');
       this.logger.warn(
-        '⚠️  Otodom authentication requested but not configured',
-      );
-      this.logger.warn(
-        '💡 Set OTODOM_EMAIL and OTODOM_PASSWORD to enable authentication',
+        'Set OTODOM_EMAIL and OTODOM_PASSWORD to enable authentication',
       );
     }
 
@@ -217,5 +213,102 @@ export class BrowserSetupService implements OnModuleDestroy {
 
   getRandomUserAgent(): string {
     return this.userAgents[Math.floor(Math.random() * this.userAgents.length)];
+  }
+
+  async scrapeWithBrowser<T>(
+    url: string,
+    forOtodom: boolean,
+    processFn: (page: Page) => Promise<T>,
+  ): Promise<T> {
+    let browser: Browser | null = null;
+    let page: Page | null = null;
+
+    try {
+      browser = await this.createBrowser();
+      page = await this.setupPage(browser, forOtodom);
+
+      const navigationTimeout = forOtodom ? 60000 : 30000;
+
+      try {
+        await page.goto(url, {
+          waitUntil: 'networkidle0',
+          timeout: navigationTimeout,
+        });
+      } catch (navError) {
+        this.logger.warn(
+          `Navigation with networkidle0 failed, retrying with domcontentloaded: ${navError instanceof Error ? navError.message : 'Unknown error'}`,
+        );
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: navigationTimeout,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+      }
+
+      if (forOtodom) {
+        const pageContent = await page.content();
+        if (
+          pageContent.includes('403 ERROR') ||
+          pageContent.includes('Request blocked') ||
+          pageContent.includes('cloudfront')
+        ) {
+          this.logger.error(
+            `CloudFront blocked request for ${url}. Authentication cookies applied but bot detection triggered.`,
+          );
+          throw new Error(
+            'CloudFront 403: Request blocked by Otodom bot protection',
+          );
+        }
+      }
+
+      await page.evaluate(() => {
+        return new Promise<void>((resolve) => {
+          let totalHeight = 0;
+          const distance = 100;
+          const timer = setInterval(() => {
+            const scrollHeight = document.body.scrollHeight;
+            window.scrollBy(0, distance);
+            totalHeight += distance;
+
+            if (totalHeight >= scrollHeight) {
+              clearInterval(timer);
+              window.scrollTo(0, 0);
+              resolve();
+            }
+          }, 100);
+        });
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      return await processFn(page);
+    } catch (error) {
+      this.logger.error(
+        `Error scraping ${url}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      throw error;
+    } finally {
+      try {
+        if (page && !page.isClosed()) {
+          await page.close();
+          this.logger.debug(`Closed page for ${url}`);
+        }
+      } catch (closeError) {
+        this.logger.warn(
+          `Failed to close page for ${url}: ${closeError instanceof Error ? closeError.message : 'Unknown error'}`,
+        );
+      }
+
+      try {
+        if (browser) {
+          await this.closeBrowser(browser);
+          this.logger.debug(`Closed browser for ${url}`);
+        }
+      } catch (closeError) {
+        this.logger.warn(
+          `Failed to close browser for ${url}: ${closeError instanceof Error ? closeError.message : 'Unknown error'}`,
+        );
+      }
+    }
   }
 }

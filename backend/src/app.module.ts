@@ -11,6 +11,7 @@ import { AlertModule } from './alert/alert.module';
 import { MatchModule } from './match/match.module';
 import { NotificationModule } from './notification/notification.module';
 import { HeatmapModule } from './heatmap/heatmap.module';
+import { OfferModule } from './offer/offer.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { HeatmapModule } from './heatmap/heatmap.module';
     MatchModule,
     NotificationModule,
     HeatmapModule,
+    OfferModule,
   ],
   controllers: [AppController],
   providers: [AppService],

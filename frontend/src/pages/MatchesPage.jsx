@@ -28,20 +28,33 @@ import {
 } from '../utils/filterSortConfig'
 
 function MatchesPage() {
+  {
+    /* Hooks */
+  }
   const navigate = useNavigate()
   const { user } = useUser()
   const [searchParams, setSearchParams] = useSearchParams()
+
+  {
+    /* State */
+  }
   const [matches, setMatches] = useState([])
   const [alerts, setAlerts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [deletingMatchId, setDeletingMatchId] = useState(null)
 
+  {
+    /* Filters */
+  }
   const { filters, updateFilter } = useFilters({
     alertId: searchParams.get('alert') || DEFAULT_FILTER.ALERT,
     sortBy: DEFAULT_SORT.MATCHES,
   })
 
+  {
+    /* API Calls */
+  }
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
@@ -70,6 +83,9 @@ function MatchesPage() {
     }
   }, [filters])
 
+  {
+    /* Effects */
+  }
   useEffect(() => {
     if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
       navigate('/login', { replace: true })
@@ -78,6 +94,9 @@ function MatchesPage() {
     fetchData()
   }, [user, navigate, fetchData])
 
+  {
+    /* Handlers */
+  }
   function handleAlertFilter(alertId) {
     updateFilter('alertId', alertId)
     if (alertId === 'all') {
@@ -106,6 +125,9 @@ function MatchesPage() {
     }
   }
 
+  {
+    /* Render - Loading State */
+  }
   if (loading) {
     return (
       <>
@@ -133,6 +155,9 @@ function MatchesPage() {
     )
   }
 
+  {
+    /* Render - Main */
+  }
   return (
     <>
       <Header />
@@ -208,7 +233,6 @@ function MatchesPage() {
                     key={match.id}
                     className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
                   >
-                    {/* Image */}
                     <div className="relative aspect-video bg-gray-900">
                       {firstImage ? (
                         <img

@@ -1,6 +1,104 @@
-# Mieszkaniownik Architecture
+<p align="center">
+  <img src="banner.png" alt="Mieszkaniownik Banner" width="100%"/>
+</p>
 
-![Mieszkaniownik](mieszkaniownik.png)
+> **Twój klucz do studenckiego mieszkania**
+
+## Tech Stack
+
+### Backend
+
+[![NestJS](https://img.shields.io/badge/NestJS-11.0-E0234E?logo=nestjs)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js)](https://nodejs.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-6.16-2D3748?logo=prisma)](https://www.prisma.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](https://www.postgresql.org/)
+
+### Frontend
+
+[![React](https://img.shields.io/badge/React-19.1-61DAFB?logo=react)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.1-646CFF?logo=vite)](https://vite.dev/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-06B6D4?logo=tailwindcss)](https://tailwindcss.com/)
+[![React Router](https://img.shields.io/badge/React_Router-7.9-CA4245?logo=reactrouter)](https://reactrouter.com/)
+
+### Scraping & Automation
+
+[![Puppeteer](https://img.shields.io/badge/Puppeteer-24.22-40B5A4?logo=puppeteer)](https://pptr.dev/)
+[![BullMQ](https://img.shields.io/badge/BullMQ-5.58-DC382D?logo=bull)](https://docs.bullmq.io/)
+[![Redis](https://img.shields.io/badge/Redis-7+-DC382D?logo=redis)](https://redis.io/)
+[![Cheerio](https://img.shields.io/badge/Cheerio-1.1-E88C1D)](https://cheerio.js.org/)
+
+### AI & Services
+
+[![Google Gemini](https://img.shields.io/badge/Google_Gemini-0.24-4285F4?logo=google)](https://ai.google.dev/)
+[![Google Maps](https://img.shields.io/badge/Google_Maps-API-4285F4?logo=googlemaps)](https://developers.google.com/maps)
+[![Discord.js](https://img.shields.io/badge/Discord.js-14.22-5865F2?logo=discord)](https://discord.js.org/)
+[![Nodemailer](https://img.shields.io/badge/Nodemailer-7.0-22B8E0)](https://nodemailer.com/)
+
+### DevOps
+
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)](https://www.docker.com/)
+[![Kubernetes](https://img.shields.io/badge/Kubernetes-Helm-326CE5?logo=kubernetes)](https://kubernetes.io/)
+[![Nginx](https://img.shields.io/badge/Nginx-Latest-009639?logo=nginx)](https://nginx.org/)
+
+### Status
+
+[![Status](https://img.shields.io/badge/Status-Beta-orange)]()
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+## O Projekcie
+
+**Mieszkaniownik** to rozwiązanie skierowane dla studentów poszukujących mieszkania lub pokoju na wynajem. Przy obecnej rotacji ofert wynajmu np. na OLX każda sekunda jest na wagę złota. Po co przepatrywać godzinami odświeżając stronę internetową, jeśli możemy po prostu utworzyć alert, wpisać jakie mieszkanie nas interesuje i jaki mamy budżet? Następnie od razu po pokazaniu się oferty dostajesz powiadomienie na maila lub Discorda z wszystkimi najważniejszymi informacjami.
+
+### Grupa Docelowa
+
+Studenci poszukujący pokoju lub mieszkania
+
+### Wartość Dodana
+
+- **Zaoszczędzony czas** - automatyczne monitorowanie ofert zamiast ręcznego odświeżania
+- **Szybsze znalezienie mieszkania** - natychmiastowe powiadomienia o nowych ofertach
+- **Więcej ofert do wyboru** - agregacja z wielu źródeł
+- **Redukcja stresu** - żadnego strachu i stresu związanego z poszukiwaniem mieszkania
+
+## Application Features
+
+### Dashboard
+
+Monitor your apartment search with personalized statistics and recent matches.
+
+![Dashboard](dashboard1.png)
+
+### Matches
+
+Browse matched apartments that fit your alert criteria.
+
+![Matches](matches1.png)
+
+### Alerts
+
+Manage your apartment search alerts with custom filters.
+
+![Alerts](alerts1.png)
+
+### Notifications
+
+Stay informed with email notifications about new matching offers.
+
+![Email Notification](notifications1.png)
+
+### Heatmap
+
+Explore apartment density across the city with interactive heatmaps.
+
+![Heatmap Overview](heatmap1.png)
+![Heatmap Detailed View](heatmap2.png)
+
+### Main Page
+
+Welcome screen with quick access to all features.
+
+![Main Page](main1.png)
 
 ## System Overview
 
@@ -166,152 +264,6 @@ sequenceDiagram
         Note over STM: Triggers complete scraping cycle
 ```
 
-## Technology Stack & Frameworks
-
-```mermaid
-graph LR
-    subgraph CORE["Core Framework"]
-        NEST[NestJS v10+<br/>TypeScript<br/>DI Container]
-    end
-
-    subgraph DB["Data Persistence"]
-        PRISMA[Prisma ORM<br/>Type-safe]
-        PG[(PostgreSQL<br/>Database)]
-    end
-
-    subgraph QUEUE["Job Queue System"]
-        BULLMQ[BullMQ<br/>Job Processing]
-        REDIS[(Redis<br/>In-memory)]
-    end
-
-    subgraph SCRAPE["Web Scraping"]
-        PUPPETEER[Puppeteer<br/>Headless Chrome]
-        STEALTH[Stealth Plugin<br/>Anti-detection]
-        WORKER[Worker Threads<br/>Parallelism]
-        OTODOM_AUTH[Otodom Auth<br/>Cookie Management]
-    end
-
-    subgraph AI["AI & Geocoding"]
-        GOOGLE_AI[Google Gemini<br/>Address NLP]
-        NOMINATIM[Nominatim<br/>Geocoding]
-        SCHEDULER[Node-cron<br/>Scheduling]
-    end
-
-    subgraph MAPS["Maps & Visualization"]
-        GMAPS[Google Maps<br/>Static API]
-        HEATMAP[Leaflet<br/>Heatmaps]
-    end
-
-    subgraph AUTH["Authentication"]
-        JWT[JWT Tokens]
-        OAUTH[Google OAuth2]
-        PASSPORT[Passport.js]
-    end
-
-    subgraph NOTIF["Notifications"]
-        NODEMAILER[Nodemailer<br/>Email]
-        DISCORD[Discord.js<br/>Bot API]
-    end
-
-    %% Connections
-    NEST --> PRISMA & BULLMQ & PUPPETEER & WORKER & OTODOM_AUTH & GOOGLE_AI & NOMINATIM & SCHEDULER & JWT & OAUTH & PASSPORT & NODEMAILER & DISCORD & GMAPS & HEATMAP
-    PRISMA --> PG
-    BULLMQ --> REDIS
-```
-
-## Database Schema & Data Flow
-
-```mermaid
-erDiagram
-    User ||--o{ Alert : "creates"
-    User ||--o{ Notification : "receives"
-    Alert ||--o{ Match : "generates"
-    Offer ||--o{ Match : "triggers"
-    Match ||--o{ Notification : "sends"
-
-    User {
-        int id PK "Primary Key"
-        string email UK "Unique Email"
-        string name "User Name"
-        string provider "OAuth Provider"
-        datetime createdAt "Created"
-        datetime updatedAt "Updated"
-        boolean isArchived "Archived Status"
-    }
-
-    Alert {
-        int id PK "Primary Key"
-        int userId FK "User Reference"
-        string name "Alert Name"
-        string city "City"
-        int minPrice "Min Price"
-        int maxPrice "Max Price"
-        int minRooms "Min Rooms"
-        int maxRooms "Max Rooms"
-        int minFootage "Min m²"
-        int maxFootage "Max m²"
-        boolean elevator "Elevator"
-        boolean furnished "Furnished"
-        boolean pets "Pets Allowed"
-        boolean parking "Parking"
-        string[] keywords "Keywords"
-        boolean isActive "Active Status"
-        datetime createdAt "Created"
-        datetime updatedAt "Updated"
-    }
-
-    Offer {
-        int id PK "Primary Key"
-        string title "Title"
-        string description "Description"
-        string link UK "Unique URL"
-        int price "Price"
-        string city "City"
-        string street "Street"
-        string streetNumber "Number"
-        string district "District"
-        string estateName "Estate"
-        decimal latitude "GPS Lat"
-        decimal longitude "GPS Lng"
-        int rooms "Rooms"
-        int footage "Area m²"
-        string buildingType "Type"
-        boolean elevator "Elevator"
-        boolean furnished "Furnished"
-        boolean pets "Pets"
-        boolean parking "Parking"
-        string[] images "Image URLs"
-        string source "Source Site"
-        int views "View Count"
-        string viewsMethod "View Method"
-        boolean isNew "New Flag"
-        boolean available "Available"
-        datetime createdAt "Created"
-        datetime updatedAt "Updated"
-    }
-
-    Match {
-        int id PK "Primary Key"
-        int alertId FK "Alert Reference"
-        int offerId FK "Offer Reference"
-        float score "Match Score"
-        boolean notified "Notification Sent"
-        datetime createdAt "Created"
-    }
-
-    Notification {
-        int id PK "Primary Key"
-        int userId FK "User Reference"
-        int matchId FK "Match Reference"
-        string type "Type"
-        string channel "Channel"
-        string status "Status"
-        string content "Content"
-        datetime sentAt "Sent Time"
-        datetime createdAt "Created"
-    }
-```
-
 ## Scraping Algorithm Flow
 
 ```mermaid
@@ -455,63 +407,132 @@ graph TB
     OTNQ --> OTNP
 ```
 
-## Heatmap Service Architecture
-
-### Database Flow
+## Database Schema & Data Flow
 
 ```mermaid
-flowchart TD
-    REQUEST[Heatmap Request<br/>Client API Call]
-    QUERY[Database Query<br/>PostgreSQL]
-    FILTER[Filter Offers<br/>Available Only]
-    COORDS[Extract GPS<br/>Coordinates]
-    INTENSITY[Calculate<br/>Density Intensity]
-    BOUNDS[Generate<br/>Map Bounds]
-    RESPONSE[JSON Response<br/>Heatmap Data]
+erDiagram
+    User ||--o{ Alert : "creates"
+    User ||--o{ Notification : "receives"
+    Alert ||--o{ Match : "generates"
+    Offer ||--o{ Match : "triggers"
+    Match ||--o{ Notification : "sends"
 
-    CONDITIONS{Query<br/>Conditions}
-    CITY[City Filter]
-    PRICE[Price Range]
-    VIEWS[View Count]
-    TYPE[Building Type]
+    User {
+        int id PK "Primary Key"
+        string email UK "Unique Email"
+        string name "User Name"
+        string provider "OAuth Provider"
+        datetime createdAt "Created"
+        datetime updatedAt "Updated"
+        boolean isArchived "Archived Status"
+    }
 
-    REQUEST --> QUERY
-    QUERY --> FILTER
-    FILTER --> COORDS
-    COORDS --> INTENSITY
-    INTENSITY --> BOUNDS
-    BOUNDS --> RESPONSE
+    Alert {
+        int id PK "Primary Key"
+        int userId FK "User Reference"
+        string name "Alert Name"
+        string city "City"
+        int minPrice "Min Price"
+        int maxPrice "Max Price"
+        int minRooms "Min Rooms"
+        int maxRooms "Max Rooms"
+        int minFootage "Min m²"
+        int maxFootage "Max m²"
+        boolean elevator "Elevator"
+        boolean furnished "Furnished"
+        boolean pets "Pets Allowed"
+        boolean parking "Parking"
+        string[] keywords "Keywords"
+        boolean isActive "Active Status"
+        datetime createdAt "Created"
+        datetime updatedAt "Updated"
+    }
 
-    FILTER --> CONDITIONS
-    CONDITIONS --> CITY & PRICE & VIEWS & TYPE
+    Offer {
+        int id PK "Primary Key"
+        string title "Title"
+        string description "Description"
+        string link UK "Unique URL"
+        int price "Price"
+        string city "City"
+        string street "Street"
+        string streetNumber "Number"
+        string district "District"
+        string estateName "Estate"
+        decimal latitude "GPS Lat"
+        decimal longitude "GPS Lng"
+        int rooms "Rooms"
+        int footage "Area m²"
+        string buildingType "Type"
+        boolean elevator "Elevator"
+        boolean furnished "Furnished"
+        boolean pets "Pets"
+        boolean parking "Parking"
+        string[] images "Image URLs"
+        string source "Source Site"
+        int views "View Count"
+        string viewsMethod "View Method"
+        boolean isNew "New Flag"
+        boolean available "Available"
+        datetime createdAt "Created"
+        datetime updatedAt "Updated"
+    }
+
+    Match {
+        int id PK "Primary Key"
+        int alertId FK "Alert Reference"
+        int offerId FK "Offer Reference"
+        float score "Match Score"
+        boolean notified "Notification Sent"
+        datetime createdAt "Created"
+    }
+
+    Notification {
+        int id PK "Primary Key"
+        int userId FK "User Reference"
+        int matchId FK "Match Reference"
+        string type "Type"
+        string channel "Channel"
+        string status "Status"
+        string content "Content"
+        datetime sentAt "Sent Time"
+        datetime createdAt "Created"
+    }
 ```
 
-### Geocoding Pipeline
+# Mieszkaniownik Architecture
 
-```mermaid
-flowchart TD
-    SCRAPE[Scrape Data<br/>Property Info]
-    EXTRACT[AI Extraction<br/>Google Gemini]
-    GEOCODE[Geocoding<br/>Nominatim OSM]
-    STORE[Store Coords<br/>PostgreSQL]
-    HEATMAP[Generate<br/>Heatmaps]
-    NOTIFY[Send<br/>Notifications]
+![Mieszkaniownik](mieszkaniownik.png)
 
-    FALLBACK{Geocoding<br/>Failed?}
-    RETRY[Retry<br/>Address Variants]
-    CIRCUIT{Circuit<br/>Breaker}
-    SKIP[Skip<br/>Geocoding]
+## Plan Rozwoju
 
-    SCRAPE --> EXTRACT
-    EXTRACT --> GEOCODE
-    GEOCODE --> FALLBACK
+### Cel
 
-    FALLBACK -->|Success| STORE
-    FALLBACK -->|Failed| RETRY
+Kompleksowe zbieranie ofert z archiwizacją do analiz rynkowych.
 
-    RETRY --> CIRCUIT
-    CIRCUIT -->|Open| SKIP
-    CIRCUIT -->|Closed| STORE
+### Faza 1: Integracje i Dane
 
-    STORE --> HEATMAP & NOTIFY
-```
+- Połączenie z portalami: nieruchomości-online, Morizon, Gratka, Domiporta
+- Rozszerzenie o wynajem nieruchomości komercyjnych, sprzedaż domów i mieszkań
+
+### Faza 2: Inteligentna Lokalizacja
+
+- Integracja Google Earth z widokiem 3D
+- Filtrowanie po czasie i komforcie dojazdu (praca, szkoła, sklepy…)
+- Dopasowanie lokalizacji z wagami - profile rodzinne, zawodowe, lifestylowe z preferencjami
+
+### Faza 3: Społeczność użytkowników
+
+- Platforma opinii o mieszkaniach, Budynkach, Ulicach czy nawet dzielnicach
+- Wskaźniki jakości i komfortu życia
+
+### Faza 4: Dogłębna analiza
+
+- Szczegółowe statystyki z dowolnymi filtrami
+- Przewidywanie trendów cenowych i dostępnościowych na podstawie ML i zebranych danych ze scrapowanych ofert
+
+### Faza 5: Doświadczenie Użytkownika
+
+- Dedykowane aplikacje mobilne (Android/iOS)
+- Wsparcie innych języków
+- Integracja logowania przez Google, Facebook…

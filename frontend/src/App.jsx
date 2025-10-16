@@ -19,6 +19,9 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 import ScrollToTop from './components/ScrollToTop'
 
 function App() {
+  {
+    /* Render */
+  }
   return (
     <Router>
       <ErrorBoundary FallbackComponent={ErrorFallback}>

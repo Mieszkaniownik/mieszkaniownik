@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Activity,
   Home,
-  Euro,
   Calendar,
   ArrowRight,
   SquareArrowOutUpRight,
@@ -21,15 +20,24 @@ import CardSkeleton from '../components/CardSkeleton'
 import StatsSkeleton from '../components/StatsSkeleton'
 
 function DashboardPage() {
+  {
+    /* Hooks */
+  }
   const navigate = useNavigate()
   const { user } = useUser()
 
+  {
+    /* State */
+  }
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [stats, setStats] = useState(null)
   const [recentMatches, setRecentMatches] = useState([])
   const [activeAlerts, setActiveAlerts] = useState([])
 
+  {
+    /* Effects */
+  }
   useEffect(() => {
     if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
       navigate('/login', { replace: true })
@@ -38,6 +46,9 @@ function DashboardPage() {
     fetchDashboardData()
   }, [user, navigate])
 
+  {
+    /* API Calls */
+  }
   async function fetchDashboardData() {
     setLoading(true)
     try {
@@ -58,6 +69,9 @@ function DashboardPage() {
     }
   }
 
+  {
+    /* Render - Loading State */
+  }
   if (loading) {
     return (
       <>
@@ -90,6 +104,9 @@ function DashboardPage() {
     )
   }
 
+  {
+    /* Render - Error State */
+  }
   if (error) {
     return (
       <>
@@ -106,6 +123,9 @@ function DashboardPage() {
     )
   }
 
+  {
+    /* Render - Main */
+  }
   return (
     <>
       <Header />
@@ -217,7 +237,6 @@ function DashboardPage() {
                               {match.offer.city}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Euro size={14} />
                               {match.offer.price} zł
                             </span>
                             {match.offer.footage && (
@@ -294,7 +313,6 @@ function DashboardPage() {
                             </span>
                             {(alert.minPrice || alert.maxPrice) && (
                               <span className="flex items-center gap-1">
-                                <Euro size={14} />
                                 {alert.minPrice && `${alert.minPrice} zł`}
                                 {alert.minPrice && alert.maxPrice && ' - '}
                                 {alert.maxPrice && `${alert.maxPrice} zł`}

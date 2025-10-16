@@ -19,8 +19,14 @@ function FilterBar({
   searchPlaceholder = 'Szukaj...',
   showSearch = false,
 }) {
+  {
+    /* Computed Values */
+  }
   const activeFiltersCount = activeFilters.length
 
+  {
+    /* Render */
+  }
   return (
     <div className="space-y-6 mb-6">
       {(showSearch || filters.length > 0) && (

@@ -1,6 +1,9 @@
 import Skeleton from './Skeleton'
 
 function CardSkeleton() {
+  {
+    /* Render */
+  }
   return (
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm p-4">
       <div className="mb-4">

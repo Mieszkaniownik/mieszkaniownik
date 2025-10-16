@@ -46,7 +46,6 @@ export class ScraperThreadManagerService {
   ];
 
   constructor(
-    @InjectQueue('scraper') private readonly scraperQueue: Queue,
     @InjectQueue('olx-existing') private readonly olxExistingQueue: Queue,
     @InjectQueue('otodom-existing') private readonly otodomExistingQueue: Queue,
     @InjectQueue('olx-new') private readonly olxNewQueue: Queue,
@@ -632,7 +631,19 @@ export class ScraperThreadManagerService {
     try {
       const offerType = isNew ? 'NEW' : 'EXISTING';
 
-      const job = await this.scraperQueue.add(
+      const isOtodom = offerUrl.includes('otodom.pl');
+      let targetQueue: Queue;
+      let queueName: string;
+
+      if (isOtodom) {
+        targetQueue = isNew ? this.otodomNewQueue : this.otodomExistingQueue;
+        queueName = isNew ? 'otodom-new' : 'otodom-existing';
+      } else {
+        targetQueue = isNew ? this.olxNewQueue : this.olxExistingQueue;
+        queueName = isNew ? 'olx-new' : 'olx-existing';
+      }
+
+      const job = await targetQueue.add(
         'processOffer',
         { url: offerUrl, isNew: isNew },
         {
@@ -647,7 +658,7 @@ export class ScraperThreadManagerService {
       );
 
       this.logger.debug(
-        `Queued ${offerType} job ID: ${job.id} with priority ${priority} for URL: ${offerUrl}`,
+        `Queued ${offerType} job ID: ${job.id} to ${queueName} with priority ${priority} for URL: ${offerUrl}`,
       );
     } catch (error) {
       this.logger.error(`Failed to queue job for ${offerUrl}:`, error);

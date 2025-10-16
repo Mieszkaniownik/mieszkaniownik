@@ -1,27 +1,33 @@
-import { useState } from "react";
-import { Eye, EyeClosed } from "lucide-react";
+import { useState } from 'react'
+import { Eye, EyeClosed } from 'lucide-react'
 
 function PasswordField({
-  id = "password",
-  name = "password",
-  placeholder = "Podaj hasło",
+  id = 'password',
+  name = 'password',
+  placeholder = 'Podaj hasło',
   required = true,
   error = false,
-  errorMessage = "Hasła nie są identyczne",
+  errorMessage = 'Hasła nie są identyczne',
   ...props
 }) {
-  const [showPassword, setShowPassword] = useState(false);
+  {
+    /* State */
+  }
+  const [showPassword, setShowPassword] = useState(false)
 
+  {
+    /* Render */
+  }
   return (
     <>
       <div className="relative">
         <input
           {...props}
-          type={showPassword ? "text" : "password"}
+          type={showPassword ? 'text' : 'password'}
           id={id}
           name={name}
           className={`w-full rounded-lg border-solid border-1 border-gray-300 p-2 ${
-            error ? "border-red-500" : ""
+            error ? 'border-red-500' : ''
           }`}
           placeholder={placeholder}
           required={required}
@@ -36,7 +42,7 @@ function PasswordField({
       </div>
       {error && <p className="text-red-500 text-sm">{errorMessage}</p>}
     </>
-  );
+  )
 }
 
-export default PasswordField;
+export default PasswordField
