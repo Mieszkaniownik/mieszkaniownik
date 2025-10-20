@@ -1,27 +1,25 @@
-import UserProvider from './context/UserContext/UserProvider'
-import LoginForm from './pages/LoginForm'
-import NotFoundPage from './pages/NotFoundPage'
-import HomePage from './pages/HomePage'
-import ErrorFallback from './components/ErrorFallback'
-import ProfilePage from './pages/ProfilePage'
-import RegisterForm from './pages/RegisterForm'
-import DashboardPage from './pages/DashboardPage'
-import AlertsPage from './pages/AlertsPage'
-import CreateAlertPage from './pages/CreateAlertPage'
-import EditAlertPage from './pages/EditAlertPage'
-import MatchesPage from './pages/MatchesPage'
-import MatchDetailPage from './pages/MatchDetailPage'
-import HeatmapPage from './pages/HeatmapPage'
-import AuthCallbackPage from './pages/AuthCallbackPage'
-import EditPasswordPage from './pages/EditPasswordPage'
-import { ErrorBoundary } from 'react-error-boundary'
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
-import ScrollToTop from './components/ScrollToTop'
+import { ErrorBoundary } from "react-error-boundary";
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+
+import ErrorFallback from "./components/ErrorFallback";
+import ScrollToTop from "./components/ScrollToTop";
+import UserProvider from "./context/UserContext/UserProvider";
+import AlertsPage from "./pages/AlertsPage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
+import CreateAlertPage from "./pages/CreateAlertPage";
+import DashboardPage from "./pages/DashboardPage";
+import EditAlertPage from "./pages/EditAlertPage";
+import EditPasswordPage from "./pages/EditPasswordPage";
+import HeatmapPage from "./pages/HeatmapPage";
+import HomePage from "./pages/HomePage";
+import LoginForm from "./pages/LoginForm";
+import MatchDetailPage from "./pages/MatchDetailPage";
+import MatchesPage from "./pages/MatchesPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ProfilePage from "./pages/ProfilePage";
+import RegisterForm from "./pages/RegisterForm";
 
 function App() {
-  {
-    /* Render */
-  }
   return (
     <Router>
       <ErrorBoundary FallbackComponent={ErrorFallback}>
@@ -49,7 +47,7 @@ function App() {
         </UserProvider>
       </ErrorBoundary>
     </Router>
-  )
+  );
 }
 
-export default App
+export default App;

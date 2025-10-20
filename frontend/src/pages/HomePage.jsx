@@ -1,20 +1,17 @@
-import Footer from '../components/Footer'
-import Home from '../components/Home'
-import Header from '../components/Header'
+import Footer from "../components/Footer";
+import Header from "../components/Header";
+import Home from "../components/Home";
 
 function HomePage() {
-  {
-    /* Render */
-  }
   return (
     <>
       <Header />
-      <main className="w-full flex justify-center flex-grow flex-col min-h-[80vh] mt-18">
+      <main className="mt-18 flex min-h-[80vh] w-full flex-grow flex-col justify-center">
         <Home />
       </main>
       <Footer />
     </>
-  )
+  );
 }
 
-export default HomePage
+export default HomePage;

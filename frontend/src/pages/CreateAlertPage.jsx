@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
-import useUser from "../context/UserContext/useUser";
-import { apiPost } from "../api/api";
 import { ArrowLeft, CirclePlus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { apiPost } from "../api/api";
 import Button from "../components/Button";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
+import useUser from "../context/UserContext/useUser";
 
 function CreateAlertPage() {
   const navigate = useNavigate();
@@ -67,7 +68,7 @@ function CreateAlertPage() {
     };
 
     Object.keys(alertData).forEach(
-      (key) => alertData[key] === undefined && delete alertData[key]
+      (key) => alertData[key] === undefined && delete alertData[key],
     );
 
     try {
@@ -96,32 +97,36 @@ function CreateAlertPage() {
   return (
     <>
       <Header />
-      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-        <div className="max-w-4xl w-full">
+      <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+        <div className="w-full max-w-4xl">
+          {/* Back Button */}
           <button
             onClick={() => navigate("/alerts")}
-            className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition mb-6"
+            className="mb-6 flex items-center gap-2 text-blue-950 transition hover:text-blue-700"
           >
             <ArrowLeft size={20} />
             Powrót do alertów
           </button>
 
+          {/* Alert Form */}
           <form
             onSubmit={handleSubmit}
-            className="w-full bg-white border border-gray-200 rounded-lg px-4 md:px-6 py-6 shadow-sm"
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-6 shadow-sm md:px-6"
           >
-            <h1 className="text-xl md:text-2xl font-bold text-blue-950 mb-2">
+            {/* Form Header */}
+            <h1 className="mb-2 text-xl font-bold text-blue-950 md:text-2xl">
               Utwórz nowy alert
             </h1>
-            <p className="text-gray-600 mb-4 text-sm md:text-base">
+            <p className="mb-4 text-sm text-gray-600 md:text-base">
               Nie przegap nowych ofert - wypełnij formularz
             </p>
 
-            <div className="w-full grid grid-cols-1 gap-4">
+            {/* Basic Information */}
+            <div className="grid w-full grid-cols-1 gap-4">
               <div className="w-full">
                 <label
                   htmlFor="name"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Nazwa alertu*
                 </label>
@@ -135,11 +140,11 @@ function CreateAlertPage() {
                 />
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label
                     htmlFor="city"
-                    className="text-sm font-medium text-blue-950 mb-2"
+                    className="mb-2 text-sm font-medium text-blue-950"
                   >
                     Miasto*
                   </label>
@@ -155,7 +160,7 @@ function CreateAlertPage() {
                 <div>
                   <label
                     htmlFor="district"
-                    className="text-sm font-medium text-blue-950 mb-2"
+                    className="mb-2 text-sm font-medium text-blue-950"
                   >
                     Dzielnica
                   </label>
@@ -170,10 +175,10 @@ function CreateAlertPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Cena (zł)
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minPrice"
@@ -193,11 +198,12 @@ function CreateAlertPage() {
                 </div>
               </div>
 
+              {/* Property Parameters Section */}
               <div>
-                <label className=" text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Metraż (m²)
                 </label>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minFootage"
@@ -218,10 +224,10 @@ function CreateAlertPage() {
               </div>
 
               <div>
-                <label className=" text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Liczba pokoi
                 </label>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minRooms"
@@ -242,10 +248,10 @@ function CreateAlertPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Piętro
                 </label>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minFloor"
@@ -268,7 +274,7 @@ function CreateAlertPage() {
               <div>
                 <label
                   htmlFor="ownerType"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Typ właściciela
                 </label>
@@ -287,7 +293,7 @@ function CreateAlertPage() {
               <div>
                 <label
                   htmlFor="buildingType"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Typ budynku
                 </label>
@@ -310,7 +316,7 @@ function CreateAlertPage() {
               <div>
                 <label
                   htmlFor="parkingType"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Parking
                 </label>
@@ -327,15 +333,16 @@ function CreateAlertPage() {
                 </select>
               </div>
 
+              {/* Preferences Section */}
               <div>
-                <label className="text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Dodatkowe wymagania
                 </label>
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <label
                       htmlFor="elevator"
-                      className="text-sm text-gray-700 mb-1"
+                      className="mb-1 text-sm text-gray-700"
                     >
                       Winda
                     </label>
@@ -352,7 +359,7 @@ function CreateAlertPage() {
                   <div>
                     <label
                       htmlFor="furniture"
-                      className="text-sm text-gray-700 mb-1"
+                      className="mb-1 text-sm text-gray-700"
                     >
                       Umeblowane
                     </label>
@@ -369,7 +376,7 @@ function CreateAlertPage() {
                   <div>
                     <label
                       htmlFor="pets"
-                      className="text-sm text-gray-700 mb-1"
+                      className="mb-1 text-sm text-gray-700"
                     >
                       Zwierzęta
                     </label>
@@ -386,10 +393,11 @@ function CreateAlertPage() {
                 </div>
               </div>
 
-              <div className="w-full flex flex-col">
+              {/* Keywords Section */}
+              <div className="flex w-full flex-col">
                 <label
                   htmlFor="keywordInput"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Słowa kluczowe
                 </label>
@@ -409,18 +417,18 @@ function CreateAlertPage() {
                   <button
                     type="button"
                     onClick={addKeyword}
-                    className="flex-shrink-0 bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700"
+                    className="flex-shrink-0 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700"
                   >
                     <span className="hidden md:inline">Dodaj</span>
                     <CirclePlus className="md:hidden" size={16} />
                   </button>
                 </div>
                 {keywords.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {keywords.map((keyword) => (
                       <span
                         key={keyword}
-                        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                        className="flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
                       >
                         {keyword}
                         <button
@@ -436,10 +444,11 @@ function CreateAlertPage() {
                 )}
               </div>
 
+              {/* Notification Settings */}
               <div>
                 <label
                   htmlFor="notificationMethod"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Sposób powiadamiania
                 </label>
@@ -457,7 +466,7 @@ function CreateAlertPage() {
               <div>
                 <label
                   htmlFor="discordWebhook"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Discord Webhook URL (opcjonalnie)
                 </label>
@@ -470,6 +479,7 @@ function CreateAlertPage() {
                 />
               </div>
 
+              {/* Form Actions */}
               <div className="flex gap-4 pt-2">
                 <Button type="submit" loading={loading} className="flex-1">
                   Utwórz <span className="hidden sm:inline">alert</span>

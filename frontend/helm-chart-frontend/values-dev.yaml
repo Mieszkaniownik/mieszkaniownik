@@ -1,0 +1,54 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets:
+    - name: registry-secret
+
+frontend:
+  replicaCount: 3
+
+  image:
+    tag: "dev-latest"
+    pullPolicy: Always
+
+  env:
+    NODE_ENV: development
+    VITE_API_URL: "https://api-dev.mieszkaniownik.com"
+    VITE_ENABLE_DEBUG: "true"
+    VITE_LOG_LEVEL: "debug"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+config:
+  api:
+    baseUrl: "https://api-dev.mieszkaniownik.com"
+    timeout: 10000
+  features:
+    enableAnalytics: true
+    enableNotifications: true
+    enableDarkMode: true
+    enableDebugMode: true
+
+ingress:
+  enabled: true
+  hosts:
+    - host: dev.mieszkaniownik.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: mieszkaniownik-dev-tls
+      hosts:
+        - dev.mieszkaniownik.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70

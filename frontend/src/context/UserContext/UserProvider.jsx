@@ -1,5 +1,6 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { getUserData } from "../../api/api";
 
 const UserContext = createContext(null);

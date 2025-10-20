@@ -1,0 +1,12 @@
+# Helm templates
+helm-chart-frontend/
+
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Logs
+*.log

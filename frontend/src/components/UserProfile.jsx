@@ -1,9 +1,10 @@
-import { useNavigate } from "react-router-dom";
-import useUser from "../context/UserContext/useUser";
+import { CircleArrowLeft, CircleArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { CircleArrowRight, CircleArrowLeft } from "lucide-react";
-import Button from "./Button";
+import { useNavigate } from "react-router-dom";
+
 import { editUser, getUserData } from "../api/api";
+import useUser from "../context/UserContext/useUser";
+import Button from "./Button";
 import Loading from "./Loading";
 
 function UserProfile() {
@@ -72,28 +73,26 @@ function UserProfile() {
 
   if (!user && sessionStorage.getItem("mieszkaniownik:token")) {
     return (
-      <main className="flex flex-1 justify-center items-center">
+      <main className="flex flex-1 items-center justify-center">
         <Loading />
       </main>
     );
   }
 
   return (
-    <main className="w-full flex flex-1 justify-center items-center flex-col p-5 mt-16">
-      <div className="flex flex-col justify-center items-center max-w-md w-full gap-1 p-4 h-auto">
-        <div className="flex flex-col gap-4 w-full border-gray-200 rounded-xl border p-4 shadow-sm">
-          <div className="gap-1 flex flex-col">
-            <h1 className="font-semibold text-xl text-blue-950 ">
-              Twoje konto
-            </h1>
-            <p className="text-gray-500 text-sm">
+    <main className="mt-16 flex w-full flex-1 flex-col items-center justify-center p-5">
+      <div className="flex h-auto w-full max-w-md flex-col items-center justify-center gap-1 p-4">
+        <div className="flex w-full flex-col gap-4 rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-xl font-semibold text-blue-950">Twoje konto</h1>
+            <p className="text-sm text-gray-500">
               Przeglądaj i edytuj swoje dane
             </p>
           </div>
 
-          <div className="relative flex items-center gap-3 my-1">
+          <div className="relative my-1 flex items-center gap-3">
             <div className="flex-grow border-t border-gray-300"></div>
-            <span className="text-gray-500 text-sm">{`Strona ${page} z 2`}</span>
+            <span className="text-sm text-gray-500">{`Strona ${page} z 2`}</span>
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
@@ -113,7 +112,7 @@ function UserProfile() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="email@example.com"
                 />
@@ -129,14 +128,14 @@ function UserProfile() {
                   value={formData.username}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Podaj nazwę użytkownika"
                 />
               </div>
 
               <Button
-                className="w-full cursor-pointer items-centers"
+                className="items-centers w-full cursor-pointer"
                 type="submit"
               >
                 <span>Dalej</span>
@@ -161,7 +160,7 @@ function UserProfile() {
                   value={formData.name}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Jan"
                 />
@@ -177,7 +176,7 @@ function UserProfile() {
                   value={formData.surname}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Nowak"
                 />
@@ -193,7 +192,7 @@ function UserProfile() {
                   value={formData.phone || ""}
                   onChange={handleChange}
                   type="tel"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   placeholder="Podaj numer telefonu"
                   pattern="[0-9+*#]*"
                   title="Dozwolone znaki: cyfry, +, * i #"
@@ -210,7 +209,7 @@ function UserProfile() {
                   value={formData.city}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Podaj miasto"
                 />
@@ -219,7 +218,7 @@ function UserProfile() {
               <div className="flex flex-row gap-1">
                 <Button
                   type="button"
-                  className="w-full cursor-pointer items-centers"
+                  className="items-centers w-full cursor-pointer"
                   onClick={prevStep}
                   disabled={loading}
                 >
@@ -238,7 +237,7 @@ function UserProfile() {
             </form>
           )}
 
-          <p className="text-gray-500 text-sm text-right w-full">
+          <p className="w-full text-right text-sm text-gray-500">
             Konto utworzone:{" "}
             <time dateTime={user.createdAt}>
               {new Date(user.createdAt).toLocaleDateString("pl-PL")}

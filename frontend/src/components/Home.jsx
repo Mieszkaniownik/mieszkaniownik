@@ -1,6 +1,7 @@
-import backgroundImage from "../assets/home-background.png";
+import { BellIcon, HomeIcon, UserIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { HomeIcon, UserIcon, BellIcon } from "lucide-react";
+
+import backgroundImage from "../assets/home-background.png";
 import useUser from "../context/UserContext/useUser";
 
 function Home() {
@@ -15,60 +16,60 @@ function Home() {
   return (
     <>
       <section
-        className="w-full h-[90dvh] relative flex flex-col items-center justify-center p-8 bg-top bg-fixed bg-no-repeat bg-cover"
+        className="relative flex h-[90dvh] w-full flex-col items-center justify-center bg-cover bg-fixed bg-top bg-no-repeat p-8"
         style={{ backgroundImage: `url(${backgroundImage})` }}
       >
         <div className="absolute inset-0 bg-black/40"></div>
-        <div className="relative z-10 flex flex-col gap-6 items-center text-center">
-          <h1 className="text-2xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-wider">
+        <div className="relative z-10 flex flex-col items-center gap-6 text-center">
+          <h1 className="text-2xl font-extrabold tracking-wider text-white sm:text-4xl md:text-6xl">
             Witamy w MIESZKANIOWNIKU!
           </h1>
-          <p className="text-lg sm:text-xl md:text-2xl text-white">
+          <p className="text-lg text-white sm:text-xl md:text-2xl">
             Twój klucz do studenckiego mieszkania
           </p>
           <button
             onClick={handleOnClick}
-            className="bg-blue-800 text-white px-8 py-3 rounded-md hover:bg-blue-700 transition duration-300"
+            className="rounded-md bg-blue-800 px-8 py-3 text-white transition duration-300 hover:bg-blue-700"
           >
             Zacznij teraz
           </button>
         </div>
       </section>
 
-      <section className="flex flex-col items-center text-center py-20 px-4 bg-gray-50">
-        <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-blue-950">
+      <section className="flex flex-col items-center bg-gray-50 px-4 py-20 text-center">
+        <h2 className="mb-6 text-3xl font-bold text-blue-950 sm:text-4xl">
           Jak działa MIESZKANIOWNIK?
         </h2>
-        <p className="max-w-2xl text-gray-700 text-lg sm:text-xl">
+        <p className="max-w-2xl text-lg text-gray-700 sm:text-xl">
           Znajdź idealne mieszkanie studenckie w kilka minut. Przeglądaj oferty,
           kontaktuj się bezpośrednio z właścicielami i zarządzaj swoimi
           ogłoszeniami w jednym miejscu.
         </p>
       </section>
 
-      <section className="w-full flex flex-col items-center py-20 px-4 bg-white gap-12">
-        <h2 className="text-2xl sm:text-4xl font-bold text-blue-950 mb-12 text-center">
+      <section className="flex w-full flex-col items-center gap-12 bg-white px-4 py-20">
+        <h2 className="mb-12 text-center text-2xl font-bold text-blue-950 sm:text-4xl">
           Nasze funkcje
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10 max-w-5xl w-full">
-          <div className="flex flex-col items-center text-center p-6 rounded-xl shadow hover:shadow-lg transition">
+        <div className="grid w-full max-w-5xl grid-cols-1 gap-10 sm:grid-cols-2 md:grid-cols-3">
+          <div className="flex flex-col items-center rounded-xl p-6 text-center shadow transition hover:shadow-lg">
             <HomeIcon size={48} className="mb-4 text-blue-950" />
-            <h3 className="text-xl font-semibold mb-2">Łatwe wyszukiwanie</h3>
+            <h3 className="mb-2 text-xl font-semibold">Łatwe wyszukiwanie</h3>
             <p className="text-gray-600">
               Przeglądaj mieszkania według lokalizacji, ceny i preferencji.
             </p>
           </div>
-          <div className="flex flex-col items-center text-center p-6 rounded-xl shadow hover:shadow-lg transition">
+          <div className="flex flex-col items-center rounded-xl p-6 text-center shadow transition hover:shadow-lg">
             <UserIcon size={48} className="mb-4 text-blue-950" />
-            <h3 className="text-xl font-semibold mb-2">Bezpieczne konto</h3>
+            <h3 className="mb-2 text-xl font-semibold">Bezpieczne konto</h3>
             <p className="text-gray-600">
               Zarejestruj się i zarządzaj swoimi ogłoszeniami w bezpieczny
               sposób.
             </p>
           </div>
-          <div className="flex flex-col items-center text-center p-6 rounded-xl shadow hover:shadow-lg transition">
+          <div className="flex flex-col items-center rounded-xl p-6 text-center shadow transition hover:shadow-lg">
             <BellIcon size={48} className="mb-4 text-blue-950" />
-            <h3 className="text-xl font-semibold mb-2">
+            <h3 className="mb-2 text-xl font-semibold">
               Znajdź mieszkanie pierwszy
             </h3>
             <p className="text-gray-600">
@@ -79,13 +80,13 @@ function Home() {
         </div>
       </section>
 
-      <section className="w-full flex flex-col items-center justify-center py-20 px-4 bg-blue-900 text-white">
-        <h2 className="text-2xl sm:text-4xl font-bold mb-6 text-center">
+      <section className="flex w-full flex-col items-center justify-center bg-blue-900 px-4 py-20 text-white">
+        <h2 className="mb-6 text-center text-2xl font-bold sm:text-4xl">
           Gotowy, aby znaleźć swoje mieszkanie?
         </h2>
         <button
           onClick={handleOnClick}
-          className="bg-white text-blue-950 px-8 py-3 rounded-md hover:bg-gray-200 transition duration-300"
+          className="rounded-md bg-white px-8 py-3 text-blue-950 transition duration-300 hover:bg-gray-200"
         >
           Zacznij teraz
         </button>
