@@ -1,13 +1,10 @@
-import Skeleton from './Skeleton'
+import Skeleton from "./Skeleton";
 
 function CardSkeleton() {
-  {
-    /* Render */
-  }
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm p-4">
+    <div className="overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
       <div className="mb-4">
-        <Skeleton className="h-6 w-3/4 mb-2" />
+        <Skeleton className="mb-2 h-6 w-3/4" />
         <Skeleton className="h-4 w-1/2" />
       </div>
 
@@ -17,12 +14,12 @@ function CardSkeleton() {
         <Skeleton className="h-4 w-4/6" />
       </div>
 
-      <div className="mt-4 flex justify-between items-center">
+      <div className="mt-4 flex items-center justify-between">
         <Skeleton className="h-8 w-20" />
         <Skeleton className="h-8 w-24" />
       </div>
     </div>
-  )
+  );
 }
 
-export default CardSkeleton
+export default CardSkeleton;

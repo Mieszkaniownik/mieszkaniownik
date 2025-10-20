@@ -1,138 +1,123 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import useUser from '../context/UserContext/useUser'
-import { apiGet } from '../api/api'
 import {
-  Bell,
-  Heart,
-  MapPin,
-  Clock,
-  AlertCircle,
   Activity,
-  Home,
-  Calendar,
+  AlertCircle,
   ArrowRight,
+  Bell,
+  Calendar,
+  Clock,
+  Heart,
+  Home,
+  MapPin,
   SquareArrowOutUpRight,
-} from 'lucide-react'
-import CardSkeleton from '../components/CardSkeleton'
-import StatsSkeleton from '../components/StatsSkeleton'
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { apiGet } from "../api/api";
+import CardSkeleton from "../components/CardSkeleton";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
+import StatsSkeleton from "../components/StatsSkeleton";
+import useUser from "../context/UserContext/useUser";
 
 function DashboardPage() {
-  {
-    /* Hooks */
-  }
-  const navigate = useNavigate()
-  const { user } = useUser()
+  const navigate = useNavigate();
+  const { user } = useUser();
 
-  {
-    /* State */
-  }
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [stats, setStats] = useState(null)
-  const [recentMatches, setRecentMatches] = useState([])
-  const [activeAlerts, setActiveAlerts] = useState([])
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [stats, setStats] = useState(null);
+  const [recentMatches, setRecentMatches] = useState([]);
+  const [activeAlerts, setActiveAlerts] = useState([]);
 
-  {
-    /* Effects */
-  }
   useEffect(() => {
-    if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
-      navigate('/login', { replace: true })
-      return
+    if (!user && !sessionStorage.getItem("mieszkaniownik:token")) {
+      navigate("/login", { replace: true });
+      return;
     }
-    fetchDashboardData()
-  }, [user, navigate])
+    fetchDashboardData();
+  }, [user, navigate]);
 
-  {
-    /* API Calls */
-  }
   async function fetchDashboardData() {
-    setLoading(true)
+    setLoading(true);
     try {
       const [statsData, matchesData, alertsData] = await Promise.all([
         apiGet(`/matches/stats`),
         apiGet(`/matches?limit=5`),
         apiGet(`/alerts?status=ACTIVE&limit=3`),
-      ])
+      ]);
 
-      setStats(statsData)
-      setRecentMatches(matchesData)
-      setActiveAlerts(alertsData)
+      setStats(statsData);
+      setRecentMatches(matchesData);
+      setActiveAlerts(alertsData);
     } catch (err) {
-      setError(err.message)
-      console.error('Dashboard fetch error:', err)
+      setError(err.message);
+      console.error("Dashboard fetch error:", err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  {
-    /* Render - Loading State */
-  }
   if (loading) {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-          <div className="max-w-7xl w-full">
+        {/* Loading State */}
+        <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+          <div className="w-full max-w-7xl">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-blue-950 mb-2">
-                Witaj! 👋
+              <h1 className="mb-2 text-3xl font-bold text-blue-950">
+                Dashboard
               </h1>
               <p className="text-gray-600">
                 Twój osobisty przegląd poszukiwań mieszkaniowych
               </p>
             </div>
 
-            <StatsSkeleton />
+            {/* Skeleton Loading */}
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <StatsSkeleton key={i} />
+              ))}
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+            <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
               {[1, 2].map((i) => (
-                <div key={i} className="space-y-4">
-                  <CardSkeleton />
-                  <CardSkeleton />
-                </div>
+                <CardSkeleton key={i} />
               ))}
             </div>
           </div>
         </main>
         <Footer />
       </>
-    )
+    );
   }
 
-  {
-    /* Render - Error State */
-  }
   if (error) {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-          <div className="max-w-7xl w-full">
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        {/* Error State */}
+        <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+          <div className="w-full max-w-7xl">
+            <div className="rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
               {error}
             </div>
           </div>
         </main>
         <Footer />
       </>
-    )
+    );
   }
 
-  {
-    /* Render - Main */
-  }
   return (
     <>
       <Header />
-      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] py-8 px-6 md:px-8 bg-gray-50 mt-16">
-        <div className="max-w-7xl w-full">
+      <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center bg-gray-50 px-6 py-8 md:px-8">
+        <div className="w-full max-w-7xl">
+          {/* Welcome Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-blue-950 mb-2">
+            <h1 className="mb-2 text-3xl font-bold text-blue-950">
               {`Witaj${user?.name && `, ${user.name}`}! 👋`}
             </h1>
             <p className="text-gray-600">
@@ -140,64 +125,67 @@ function DashboardPage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            <div className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
-              <div className="p-3 bg-purple-100 rounded-lg">
+          {/* Statistics Cards */}
+          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+              <div className="rounded-lg bg-purple-100 p-3">
                 <Heart className="text-purple-600" size={24} />
               </div>
               <div>
-                <p className="text-gray-600 text-sm mb-1">Dopasowania</p>
+                <p className="mb-1 text-sm text-gray-600">Dopasowania</p>
                 <p className="text-3xl font-bold text-blue-950">
                   {stats?.totalMatches || 0}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="mt-2 text-xs text-gray-500">
                   {stats?.unreadMatches || 0} nowych
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
-              <div className="p-3 bg-green-100 rounded-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+              <div className="rounded-lg bg-green-100 p-3">
                 <Activity className="text-green-600" size={24} />
               </div>
               <div>
-                <p className="text-gray-600 text-sm mb-1">Śr. na alert</p>
+                <p className="mb-1 text-sm text-gray-600">Śr. na alert</p>
                 <p className="text-3xl font-bold text-blue-950">
                   {stats?.matchesByAlert && activeAlerts.length > 0
                     ? Math.round(stats.totalMatches / activeAlerts.length)
                     : 0}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">Średnia dopasowań</p>
+                <p className="mt-2 text-xs text-gray-500">Średnia dopasowań</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition">
-              <div className="p-3 bg-blue-100 rounded-lg">
+            <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition hover:shadow-md">
+              <div className="rounded-lg bg-blue-100 p-3">
                 <Bell className="text-blue-600" size={24} />
               </div>
               <div>
-                <p className="text-gray-600 text-sm mb-1">Aktywne Alerty</p>
+                <p className="mb-1 text-sm text-gray-600">Aktywne Alerty</p>
                 <p className="text-3xl font-bold text-blue-950">
                   {activeAlerts.length}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="mt-2 text-xs text-gray-500">
                   Monitorują nowe oferty
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center md:justify-between gap-2">
-                  <h2 className="text-xl font-bold text-blue-950 flex items-center gap-2">
+          {/* Recent Matches and Active Alerts */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* Recent Matches Section */}
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-200 p-6">
+                <div className="flex items-center gap-2 md:justify-between">
+                  <h2 className="flex items-center gap-2 text-xl font-bold text-blue-950">
                     <Activity size={24} className="text-purple-600" />
                     Ostatnie Dopasowania
                   </h2>
                   <button
-                    onClick={() => navigate('/matches')}
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    onClick={() => navigate("/matches")}
+                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                   >
                     <span className="hidden md:flex">Zobacz wszystkie</span>
                     <SquareArrowOutUpRight size={16} />
@@ -211,8 +199,8 @@ function DashboardPage() {
                     <AlertCircle className="mx-auto mb-2" size={32} />
                     <p>Brak dopasowań</p>
                     <button
-                      onClick={() => navigate('/alerts/new')}
-                      className="mt-4 text-blue-600 hover:text-blue-700 text-sm"
+                      onClick={() => navigate("/alerts/new")}
+                      className="mt-4 text-sm text-blue-600 hover:text-blue-700"
                     >
                       Utwórz pierwszy alert
                     </button>
@@ -221,14 +209,14 @@ function DashboardPage() {
                   recentMatches.map((match) => (
                     <div
                       key={match.id}
-                      className="p-4 hover:bg-gray-50 cursor-pointer transition"
+                      className="cursor-pointer p-4 transition hover:bg-gray-50"
                       onClick={() =>
-                        window.open(match.offer.link, '_blank', 'noopener')
+                        window.open(match.offer.link, "_blank", "noopener")
                       }
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-grow">
-                          <h3 className="font-semibold text-blue-950 mb-1">
+                          <h3 className="mb-1 font-semibold text-blue-950">
                             {match.offer.title}
                           </h3>
                           <div className="flex flex-wrap gap-3 text-sm text-gray-600">
@@ -246,14 +234,14 @@ function DashboardPage() {
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="rounded bg-purple-100 px-2 py-1 text-xs text-purple-700">
                               {match.matchScore}% dopasowanie
                             </span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <span className="flex items-center gap-1 text-xs text-gray-500">
                               <Clock size={12} />
                               {new Date(match.matchedAt).toLocaleDateString(
-                                'pl-PL'
+                                "pl-PL",
                               )}
                             </span>
                           </div>
@@ -265,16 +253,17 @@ function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center md:justify-between gap-1">
-                  <h2 className="text-xl font-bold text-blue-950 flex items-center gap-2">
+            {/* Active Alerts Section */}
+            <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+              <div className="border-b border-gray-200 p-6">
+                <div className="flex items-center gap-1 md:justify-between">
+                  <h2 className="flex items-center gap-2 text-xl font-bold text-blue-950">
                     <Bell size={24} className="text-blue-600" />
                     Aktywne Alerty
                   </h2>
                   <button
-                    onClick={() => navigate('/alerts')}
-                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                    onClick={() => navigate("/alerts")}
+                    className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700"
                   >
                     <span className="hidden md:flex">Zobacz wszystkie</span>
                     <SquareArrowOutUpRight size={16} />
@@ -288,8 +277,8 @@ function DashboardPage() {
                     <Bell className="mx-auto mb-2" size={32} />
                     <p>Brak aktywnych alertów</p>
                     <button
-                      onClick={() => navigate('/alerts/new')}
-                      className="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
+                      onClick={() => navigate("/alerts/new")}
+                      className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
                     >
                       Utwórz pierwszy alert
                     </button>
@@ -298,12 +287,12 @@ function DashboardPage() {
                   activeAlerts.map((alert) => (
                     <div
                       key={alert.id}
-                      className="p-4 hover:bg-gray-50 cursor-pointer transition"
+                      className="cursor-pointer p-4 transition hover:bg-gray-50"
                       onClick={() => navigate(`/matches?alert=${alert.id}`)}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-grow">
-                          <h3 className="font-semibold text-blue-950 mb-1">
+                          <h3 className="mb-1 font-semibold text-blue-950">
                             {alert.name}
                           </h3>
                           <div className="flex flex-wrap gap-3 text-sm text-gray-600">
@@ -314,20 +303,20 @@ function DashboardPage() {
                             {(alert.minPrice || alert.maxPrice) && (
                               <span className="flex items-center gap-1">
                                 {alert.minPrice && `${alert.minPrice} zł`}
-                                {alert.minPrice && alert.maxPrice && ' - '}
+                                {alert.minPrice && alert.maxPrice && " - "}
                                 {alert.maxPrice && `${alert.maxPrice} zł`}
                               </span>
                             )}
                           </div>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1">
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="flex items-center gap-1 rounded bg-green-100 px-2 py-1 text-xs text-green-700">
                               <Heart size={12} />
                               {alert._count?.matches || 0} dopasowań
                             </span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <span className="flex items-center gap-1 text-xs text-gray-500">
                               <Calendar size={12} />
                               {new Date(alert.createdAt).toLocaleDateString(
-                                'pl-PL'
+                                "pl-PL",
                               )}
                             </span>
                           </div>
@@ -343,7 +332,7 @@ function DashboardPage() {
       </main>
       <Footer />
     </>
-  )
+  );
 }
 
-export default DashboardPage
+export default DashboardPage;

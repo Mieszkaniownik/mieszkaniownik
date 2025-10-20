@@ -1,11 +1,12 @@
-import logo from "../assets/logo.png";
-import { useNavigate, Link } from "react-router-dom";
-import useUser from "../context/UserContext/useUser";
+import { ArrowUpIcon, CircleArrowLeft, CircleArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
-import { ArrowUpIcon, CircleArrowRight, CircleArrowLeft } from "lucide-react";
-import PasswordField from "../components/PasswordField";
-import Button from "../components/Button";
+import { Link, useNavigate } from "react-router-dom";
+
 import { authRegister } from "../api/api";
+import logo from "../assets/logo.png";
+import Button from "../components/Button";
+import PasswordField from "../components/PasswordField";
+import useUser from "../context/UserContext/useUser";
 
 function RegisterForm() {
   const navigate = useNavigate();
@@ -60,18 +61,22 @@ function RegisterForm() {
   }
 
   return (
-    <main className="w-full flex justify-center items-center flex-col p-5">
-      <div className="flex flex-col gap-8 items-start w-full max-w-350">
+    <main className="flex w-full flex-col items-center justify-center p-5">
+      {/* Back Button */}
+      <div className="flex w-full max-w-350 flex-col items-start gap-8">
         <button
-          className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition-colors duration-300"
+          className="flex items-center gap-2 text-blue-950 transition-colors duration-300 hover:text-blue-700"
           onClick={() => navigate("/")}
         >
           <ArrowUpIcon className="rotate-[-90deg]" />
           Powrót do strony głównej
         </button>
       </div>
-      <div className="flex flex-col justify-center items-center max-w-md w-full gap-1 p-4 h-auto">
-        <div className="flex flex-col items-center gap-1 p-4 w-full">
+
+      {/* Registration Form Container */}
+      <div className="flex h-auto w-full max-w-md flex-col items-center justify-center gap-1 p-4">
+        {/* Logo and Title */}
+        <div className="flex w-full flex-col items-center gap-1 p-4">
           <img
             src={logo}
             alt="Logo strony Mieszkaniownik"
@@ -79,30 +84,32 @@ function RegisterForm() {
             height={80}
             className="bg-transparent"
           />
-          <span className="text-center text-blue-950 font-bold text-2xl tracking-wider">
+          <span className="text-center text-2xl font-bold tracking-wider text-blue-950">
             Mieszkaniownik
           </span>
-          <p className="text-center text-blue-950 text-base">
+          <p className="text-center text-base text-blue-950">
             Twój klucz do studenckiego mieszkania
           </p>
         </div>
 
-        <div className="flex flex-col gap-4 w-full border-gray-200 rounded-xl border p-4 shadow-sm">
-          <div className="gap-1 flex flex-col">
-            <h1 className="font-semibold text-xl text-blue-950 ">
-              Rejestracja
-            </h1>
-            <p className="text-gray-500 text-sm">
+        {/* Registration Form Steps */}
+        <div className="flex w-full flex-col gap-4 rounded-xl border border-gray-200 p-4 shadow-sm">
+          {/* Form Header */}
+          <div className="flex flex-col gap-1">
+            <h1 className="text-xl font-semibold text-blue-950">Rejestracja</h1>
+            <p className="text-sm text-gray-500">
               Wypełnij formularz, aby utworzyć konto
             </p>
           </div>
 
-          <div className="relative flex items-center gap-3 my-1">
+          {/* Progress Indicator */}
+          <div className="relative my-1 flex items-center gap-3">
             <div className="flex-grow border-t border-gray-300"></div>
-            <span className="text-gray-500 text-sm">{`Krok ${step} z 3`}</span>
+            <span className="text-sm text-gray-500">{`Krok ${step} z 3`}</span>
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
+          {/* Step 1: Email & Password */}
           {step === 1 && (
             <form
               id="step1-form"
@@ -119,7 +126,7 @@ function RegisterForm() {
                   type="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="email@example.com"
                 />
@@ -135,14 +142,14 @@ function RegisterForm() {
                   value={formData.username}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Podaj nazwę użytkownika"
                 />
               </div>
 
               <Button
-                className="w-full cursor-pointer items-centers"
+                className="items-centers w-full cursor-pointer"
                 type="submit"
               >
                 <span>Dalej</span>
@@ -207,7 +214,7 @@ function RegisterForm() {
               <div className="flex flex-row gap-1">
                 <Button
                   type="button"
-                  className="w-full cursor-pointer items-centers"
+                  className="items-centers w-full cursor-pointer"
                   onClick={prevStep}
                 >
                   <CircleArrowLeft />
@@ -216,7 +223,7 @@ function RegisterForm() {
 
                 <Button
                   type="submit"
-                  className="w-full cursor-pointer items-centers"
+                  className="items-centers w-full cursor-pointer"
                 >
                   <span>Dalej</span>
                   <CircleArrowRight />
@@ -241,7 +248,7 @@ function RegisterForm() {
                   value={formData.name}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Jan"
                 />
@@ -257,7 +264,7 @@ function RegisterForm() {
                   value={formData.surname}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Nowak"
                 />
@@ -273,7 +280,7 @@ function RegisterForm() {
                   value={formData.phone || ""}
                   onChange={handleChange}
                   type="tel"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   placeholder="Podaj numer telefonu"
                   pattern="[0-9+*#]*"
                   title="Dozwolone znaki: cyfry, +, * i #"
@@ -290,7 +297,7 @@ function RegisterForm() {
                   value={formData.city}
                   onChange={handleChange}
                   type="text"
-                  className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+                  className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
                   required={true}
                   placeholder="Podaj miasto"
                 />
@@ -299,7 +306,7 @@ function RegisterForm() {
               <div className="flex flex-row gap-1">
                 <Button
                   type="button"
-                  className="w-full cursor-pointer items-centers"
+                  className="items-centers w-full cursor-pointer"
                   onClick={prevStep}
                   disabled={loading}
                 >
@@ -317,7 +324,7 @@ function RegisterForm() {
               </div>
             </form>
           )}
-          <p className="text-gray-500 text-sm text-right w-full">
+          <p className="w-full text-right text-sm text-gray-500">
             Już masz konto?{" "}
             <Link
               to="/login"

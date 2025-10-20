@@ -1,23 +1,31 @@
 <!doctype html>
 <html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <link href="/src/index.css" rel="stylesheet" />
 
-<head>
-  <meta charset="UTF-8" />
-  <link href="/src/index.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/icons/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/logo192.jpg" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/icons/logo192.jpg"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="/icons/logo512.jpg"
+    />
 
-  <link rel="icon" type="image/x-icon" href="/icons/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="192x192" href="/icons/logo192.jpg" />
-  <link rel="icon" type="image/png" sizes="192x192" href="/icons/logo192.jpg" />
-  <link rel="icon" type="image/png" sizes="512x512" href="/icons/logo512.jpg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Mieszkaniownik</title>
+  </head>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="manifest" href="/manifest.json" />
-  <title>Mieszkaniownik</title>
-</head>
-
-<body class=" bg-white text-black w-full min-h-screen  m-0">
-  <div id="root" class="flex flex-col min-h-screen w-full items-center"></div>
-  <script type="module" src="/src/main.jsx"></script>
-</body>
-
+  <body class="m-0 min-h-screen w-full bg-white text-black">
+    <div id="root" class="flex min-h-screen w-full flex-col items-center"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>

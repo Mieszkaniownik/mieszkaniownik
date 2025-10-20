@@ -1,0 +1,21 @@
+{{- if .Values.config }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "mieszkaniownik-frontend.configName" . }}
+  labels:
+    {{- include "mieszkaniownik-frontend.labels" . | nindent 4 }}
+data:
+  {{- if .Values.config.api }}
+  VITE_API_BASE_URL: {{ .Values.config.api.baseUrl | quote }}
+  VITE_API_TIMEOUT: {{ .Values.config.api.timeout | quote }}
+  {{- end }}
+  {{- if .Values.config.features }}
+  VITE_ENABLE_ANALYTICS: {{ .Values.config.features.enableAnalytics | quote }}
+  VITE_ENABLE_NOTIFICATIONS: {{ .Values.config.features.enableNotifications | quote }}
+  VITE_ENABLE_DARK_MODE: {{ .Values.config.features.enableDarkMode | quote }}
+  {{- if .Values.config.features.enableDebugMode }}
+  VITE_ENABLE_DEBUG_MODE: {{ .Values.config.features.enableDebugMode | quote }}
+  {{- end }}
+  {{- end }}
+{{- end }}

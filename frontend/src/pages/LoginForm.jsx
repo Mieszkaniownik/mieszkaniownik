@@ -1,11 +1,12 @@
-import logo from "../assets/logo.png";
-import { useNavigate, Link } from "react-router-dom";
-import useUser from "../context/UserContext/useUser";
-import { useEffect, useState } from "react";
-import { authLogin } from "../api/api";
 import { ArrowUpIcon } from "lucide-react";
-import PasswordField from "../components/PasswordField";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import { authLogin } from "../api/api";
+import logo from "../assets/logo.png";
 import Button from "../components/Button";
+import PasswordField from "../components/PasswordField";
+import useUser from "../context/UserContext/useUser";
 
 function LoginForm() {
   const navigate = useNavigate();
@@ -38,18 +39,22 @@ function LoginForm() {
   }
 
   return (
-    <main className="w-full flex justify-center items-center flex-col p-5">
-      <div className="flex flex-col gap-8 items-start w-full max-w-350">
+    <main className="flex w-full flex-col items-center justify-center p-5">
+      {/* Back Button */}
+      <div className="flex w-full max-w-350 flex-col items-start gap-8">
         <button
-          className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition-colors duration-300"
+          className="flex items-center gap-2 text-blue-950 transition-colors duration-300 hover:text-blue-700"
           onClick={() => navigate("/")}
         >
           <ArrowUpIcon className="rotate-[-90deg]" />
           Powrót do strony głównej
         </button>
       </div>
-      <div className="flex flex-col justify-center items-center max-w-md w-full gap-1 p-4 h-auto">
-        <div className="flex flex-col items-center gap-1 p-4 w-full">
+
+      {/* Login Form Container */}
+      <div className="flex h-auto w-full max-w-md flex-col items-center justify-center gap-1 p-4">
+        {/* Logo and Title */}
+        <div className="flex w-full flex-col items-center gap-1 p-4">
           <img
             src={logo}
             alt="Logo strony Mieszkaniownik"
@@ -57,21 +62,22 @@ function LoginForm() {
             height={80}
             className="bg-transparent"
           />
-          <span className="text-center text-blue-950 font-bold text-2xl tracking-wider">
+          <span className="text-center text-2xl font-bold tracking-wider text-blue-950">
             Mieszkaniownik
           </span>
-          <p className="text-center text-blue-950 text-base">
+          <p className="text-center text-base text-blue-950">
             Twój klucz do studenckiego mieszkania
           </p>
         </div>
 
+        {/* Login Form */}
         <form
-          className="flex flex-col gap-4 w-full border-gray-200 rounded-xl border p-4 shadow-sm"
+          className="flex w-full flex-col gap-4 rounded-xl border border-gray-200 p-4 shadow-sm"
           onSubmit={handleSubmit}
         >
-          <div className="gap-1 flex flex-col">
-            <h1 className="font-semibold text-xl text-blue-950 ">Logowanie</h1>
-            <p className="text-gray-500 text-sm">Podaj swój email oraz hasło</p>
+          <div className="flex flex-col gap-1">
+            <h1 className="text-xl font-semibold text-blue-950">Logowanie</h1>
+            <p className="text-sm text-gray-500">Podaj swój email oraz hasło</p>
           </div>
 
           <div className="flex flex-col gap-1">
@@ -82,7 +88,7 @@ function LoginForm() {
               id="email"
               name="email"
               type="email"
-              className="w-full rounded-lg border-solid border-1 border-gray-300 p-2"
+              className="w-full rounded-lg border-1 border-solid border-gray-300 p-2"
               required={true}
               placeholder="email@example.com"
             />
@@ -104,7 +110,7 @@ function LoginForm() {
               Zaloguj się
             </Button>
 
-            <p className="text-gray-500 text-sm text-right w-full">
+            <p className="w-full text-right text-sm text-gray-500">
               Nie masz konta?{" "}
               <Link
                 to="/register"

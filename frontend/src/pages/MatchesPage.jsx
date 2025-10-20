@@ -1,108 +1,91 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import FilterBar from '../components/FilterBar'
-import AlertFilterButtons from '../components/AlertFilterButtons'
-import useUser from '../context/UserContext/useUser'
-import useFilters from '../hooks/useFilters'
-import { apiGet, apiDelete } from '../api/api'
 import {
-  MapPin,
-  Home,
-  Ruler,
-  ExternalLink,
-  Filter,
-  Trash2,
-  Eye,
-  Loader2,
-  Info,
   Bell,
+  ExternalLink,
+  Eye,
+  Filter,
+  Home,
+  Info,
+  Loader2,
+  MapPin,
+  Ruler,
+  Trash2,
   TrendingUp,
-} from 'lucide-react'
-import CardSkeleton from '../components/CardSkeleton'
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+
+import { apiDelete, apiGet } from "../api/api";
+import AlertFilterButtons from "../components/AlertFilterButtons";
+import CardSkeleton from "../components/CardSkeleton";
+import FilterBar from "../components/FilterBar";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
+import useUser from "../context/UserContext/useUser";
+import useFilters from "../hooks/useFilters";
 import {
-  MATCH_SORT_OPTIONS,
-  DEFAULT_SORT,
   DEFAULT_FILTER,
-} from '../utils/filterSortConfig'
+  DEFAULT_SORT,
+  MATCH_SORT_OPTIONS,
+} from "../utils/filterSortConfig";
 
 function MatchesPage() {
-  {
-    /* Hooks */
-  }
-  const navigate = useNavigate()
-  const { user } = useUser()
-  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate();
+  const { user } = useUser();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  {
-    /* State */
-  }
-  const [matches, setMatches] = useState([])
-  const [alerts, setAlerts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [deletingMatchId, setDeletingMatchId] = useState(null)
+  const [matches, setMatches] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [deletingMatchId, setDeletingMatchId] = useState(null);
 
-  {
-    /* Filters */
-  }
   const { filters, updateFilter } = useFilters({
-    alertId: searchParams.get('alert') || DEFAULT_FILTER.ALERT,
+    alertId: searchParams.get("alert") || DEFAULT_FILTER.ALERT,
     sortBy: DEFAULT_SORT.MATCHES,
-  })
+  });
 
-  {
-    /* API Calls */
-  }
   const fetchData = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const params = new URLSearchParams()
+      const params = new URLSearchParams();
 
-      if (filters.alertId !== 'all') {
-        params.append('alertId', filters.alertId)
+      if (filters.alertId !== "all") {
+        params.append("alertId", filters.alertId);
       }
 
       if (filters.sortBy) {
-        params.append('sortBy', filters.sortBy)
+        params.append("sortBy", filters.sortBy);
       }
 
       const [matchesData, alertsData] = await Promise.all([
         apiGet(`/matches?${params.toString()}`),
-        apiGet('/alerts'),
-      ])
+        apiGet("/alerts"),
+      ]);
 
-      setMatches(matchesData)
-      setAlerts(alertsData)
+      setMatches(matchesData);
+      setAlerts(alertsData);
     } catch (err) {
-      setError(err.message || 'Nie udało się pobrać danych')
-      console.error(err)
+      setError(err.message || "Nie udało się pobrać danych");
+      console.error(err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [filters])
+  }, [filters]);
 
-  {
-    /* Effects */
-  }
   useEffect(() => {
-    if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
-      navigate('/login', { replace: true })
-      return
+    if (!user && !sessionStorage.getItem("mieszkaniownik:token")) {
+      navigate("/login", { replace: true });
+      return;
     }
-    fetchData()
-  }, [user, navigate, fetchData])
+    fetchData();
+  }, [user, navigate, fetchData]);
 
-  {
-    /* Handlers */
-  }
   function handleAlertFilter(alertId) {
-    updateFilter('alertId', alertId)
-    if (alertId === 'all') {
-      setSearchParams({})
+    updateFilter("alertId", alertId);
+    if (alertId === "all") {
+      setSearchParams({});
     } else {
-      setSearchParams({ alert: alertId })
+      setSearchParams({ alert: alertId });
     }
   }
 
@@ -110,32 +93,29 @@ function MatchesPage() {
     if (
       !window.confirm(`Czy na pewno chcesz usunąć dopasowanie "${offerTitle}"?`)
     ) {
-      return
+      return;
     }
 
-    setDeletingMatchId(matchId)
+    setDeletingMatchId(matchId);
     try {
-      await apiDelete(`/matches/${matchId}`)
-      await fetchData()
+      await apiDelete(`/matches/${matchId}`);
+      await fetchData();
     } catch (err) {
-      alert('Błąd: Nie udało się usunąć dopasowania')
-      console.error(err)
+      alert("Błąd: Nie udało się usunąć dopasowania");
+      console.error(err);
     } finally {
-      setDeletingMatchId(null)
+      setDeletingMatchId(null);
     }
   }
 
-  {
-    /* Render - Loading State */
-  }
   if (loading) {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-          <div className="max-w-7xl w-full">
+        <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+          <div className="w-full max-w-7xl">
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-blue-950 mb-2">
+              <h1 className="mb-2 text-3xl font-bold text-blue-950">
                 Dopasowania
               </h1>
               <p className="text-gray-600">
@@ -143,7 +123,7 @@ function MatchesPage() {
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <CardSkeleton key={i} />
               ))}
@@ -152,19 +132,16 @@ function MatchesPage() {
         </main>
         <Footer />
       </>
-    )
+    );
   }
 
-  {
-    /* Render - Main */
-  }
   return (
     <>
       <Header />
-      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-        <div className="max-w-7xl w-full">
+      <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+        <div className="w-full max-w-7xl">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-blue-950 mb-2">
+            <h1 className="mb-2 text-3xl font-bold text-blue-950">
               Dopasowania
             </h1>
             <p className="text-gray-600">
@@ -173,8 +150,8 @@ function MatchesPage() {
           </div>
 
           {/* Alert Filter */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm mb-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="mb-6 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center gap-3">
                 <Filter size={20} className="text-gray-600" />
                 <h2 className="font-semibold text-gray-900">
@@ -195,86 +172,86 @@ function MatchesPage() {
             <FilterBar
               sortOptions={MATCH_SORT_OPTIONS}
               sortBy={filters.sortBy}
-              onSortChange={(value) => updateFilter('sortBy', value)}
+              onSortChange={(value) => updateFilter("sortBy", value)}
             />
           )}
 
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="mb-4 rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
               {error}
             </div>
           )}
 
           {matches.length === 0 ? (
-            <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <Home size={48} className="mx-auto text-gray-400 mb-4" />
-              <p className="text-gray-600 text-lg mb-2">
+            <div className="rounded-lg bg-gray-50 py-12 text-center">
+              <Home size={48} className="mx-auto mb-4 text-gray-400" />
+              <p className="mb-2 text-lg text-gray-600">
                 Brak dopasowanych ofert
               </p>
-              <p className="text-gray-500 mb-4">
-                {filters.alertId === 'all'
-                  ? 'Nie znaleziono jeszcze żadnych dopasowań do Twoich alertów'
-                  : 'Brak dopasowań dla wybranego alertu'}
+              <p className="mb-4 text-gray-500">
+                {filters.alertId === "all"
+                  ? "Nie znaleziono jeszcze żadnych dopasowań do Twoich alertów"
+                  : "Brak dopasowań dla wybranego alertu"}
               </p>
               <button
-                onClick={() => navigate('/alerts')}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+                onClick={() => navigate("/alerts")}
+                className="rounded-lg bg-blue-600 px-6 py-3 text-white transition hover:bg-blue-700"
               >
                 Zarządzaj alertami
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {matches.map((match) => {
-                const firstImage = match.offer?.images?.[0]
+                const firstImage = match.offer?.images?.[0];
 
                 return (
                   <div
                     key={match.id}
-                    className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
+                    className="flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition hover:shadow-md"
                   >
                     <div className="relative aspect-video bg-gray-900">
                       {firstImage ? (
                         <img
                           src={firstImage}
                           alt={match.offer.title}
-                          className="w-full h-full object-cover"
+                          className="h-full w-full object-cover"
                           onError={(e) => {
-                            e.target.onerror = null
+                            e.target.onerror = null;
                             e.target.src =
-                              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext fill="%236b7280" font-family="sans-serif" font-size="18" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EBrak zdjęcia%3C/text%3E%3C/svg%3E'
+                              'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e7eb" width="400" height="300"/%3E%3Ctext fill="%236b7280" font-family="sans-serif" font-size="18" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3EBrak zdjęcia%3C/text%3E%3C/svg%3E';
                           }}
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <div className="flex h-full w-full items-center justify-center text-gray-400">
                           <Home size={48} />
                         </div>
                       )}
                       {match.offer.isNew && (
                         <div className="absolute top-2 right-2">
-                          <span className="bg-yellow-500 text-white px-2 py-1 rounded text-xs font-bold">
+                          <span className="rounded bg-yellow-500 px-2 py-1 text-xs font-bold text-white">
                             NOWE
                           </span>
                         </div>
                       )}
                       {match.offer?.images && match.offer.images.length > 1 && (
-                        <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                        <div className="absolute right-2 bottom-2 rounded bg-black/70 px-2 py-1 text-xs text-white">
                           +{match.offer.images.length - 1} zdjęć
                         </div>
                       )}
                     </div>
 
                     {/* Content */}
-                    <div className="p-4 flex flex-col flex-grow">
+                    <div className="flex flex-grow flex-col p-4">
                       {/* Alert badge */}
                       {match.alert && (
                         <div className="mb-2 flex items-center justify-between">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded text-xs">
+                          <span className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">
                             <Bell size={12} />
                             {match.alert.name}
                           </span>
                           {match.alert._count?.matches !== undefined && (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded text-xs font-medium">
+                            <span className="inline-flex items-center gap-1 rounded bg-blue-600 px-2 py-1 text-xs font-medium text-white">
                               <Bell size={12} />
                               {match.alert._count.matches}
                             </span>
@@ -283,16 +260,16 @@ function MatchesPage() {
                       )}
 
                       {/* Title and Price */}
-                      <h3 className="text-lg font-semibold text-blue-950 mb-2 line-clamp-2">
+                      <h3 className="mb-2 line-clamp-2 text-lg font-semibold text-blue-950">
                         {match.offer.title}
                       </h3>
-                      <div className="text-2xl font-bold text-blue-950 mb-3">
-                        {parseFloat(match.offer.price).toLocaleString('pl-PL')}{' '}
+                      <div className="mb-3 text-2xl font-bold text-blue-950">
+                        {parseFloat(match.offer.price).toLocaleString("pl-PL")}{" "}
                         zł
                       </div>
 
                       {/* Location */}
-                      <div className="flex items-center gap-1 text-gray-600 text-sm mb-3">
+                      <div className="mb-3 flex items-center gap-1 text-sm text-gray-600">
                         <MapPin size={14} />
                         <span className="line-clamp-1">
                           {match.offer.city}
@@ -301,7 +278,7 @@ function MatchesPage() {
                       </div>
 
                       {/* Key Stats */}
-                      <div className="flex flex-wrap gap-3 mb-4 text-sm">
+                      <div className="mb-4 flex flex-wrap gap-3 text-sm">
                         {match.offer.footage && (
                           <div className="flex items-center gap-1 text-gray-600">
                             <Ruler size={14} />
@@ -324,19 +301,19 @@ function MatchesPage() {
                       </div>
 
                       {/* Tags */}
-                      <div className="flex flex-wrap gap-1 mb-4">
+                      <div className="mb-4 flex flex-wrap gap-1">
                         {match.offer.furniture && (
-                          <span className="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
+                          <span className="rounded bg-green-100 px-2 py-1 text-xs text-green-700">
                             Umeblowane
                           </span>
                         )}
                         {match.offer.elevator && (
-                          <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                          <span className="rounded bg-blue-100 px-2 py-1 text-xs text-blue-700">
                             Winda
                           </span>
                         )}
                         {match.offer.pets && (
-                          <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-xs">
+                          <span className="rounded bg-purple-100 px-2 py-1 text-xs text-purple-700">
                             Zwierzęta
                           </span>
                         )}
@@ -346,7 +323,7 @@ function MatchesPage() {
                       <div className="mt-auto space-y-2">
                         <button
                           onClick={() => navigate(`/matches/${match.id}`)}
-                          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-full hover:bg-blue-700 transition-colors"
+                          className="flex w-full items-center justify-center gap-2 rounded-full bg-blue-600 px-4 py-2.5 text-white transition-colors hover:bg-blue-700"
                         >
                           <Info size={16} />
                           <span className="text-sm font-medium">Szczegóły</span>
@@ -356,7 +333,7 @@ function MatchesPage() {
                             href={match.offer.link}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 border border-blue-600 text-blue-600 rounded-full hover:bg-blue-50 transition-colors text-sm font-medium"
+                            className="flex flex-1 items-center justify-center gap-2 rounded-full border border-blue-600 px-3 py-2 text-sm font-medium text-blue-600 transition-colors hover:bg-blue-50"
                           >
                             <ExternalLink size={14} />
                             Oferta
@@ -366,7 +343,7 @@ function MatchesPage() {
                               onClick={() =>
                                 navigate(`/matches?alert=${match.alert.id}`)
                               }
-                              className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 text-gray-600 rounded-full hover:bg-gray-50 transition-colors text-sm font-medium"
+                              className="flex items-center justify-center gap-2 rounded-full border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-50"
                               title="Zobacz dopasowania alertu"
                             >
                               <Eye size={14} />
@@ -377,7 +354,7 @@ function MatchesPage() {
                               handleDeleteMatch(match.id, match.offer?.title)
                             }
                             disabled={deletingMatchId === match.id}
-                            className="flex items-center justify-center gap-2 px-3 py-2 border border-red-600 text-red-600 rounded-full hover:bg-red-50 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="flex items-center justify-center gap-2 rounded-full border border-red-600 px-3 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                             title="Usuń dopasowanie"
                           >
                             {deletingMatchId === match.id ? (
@@ -390,7 +367,7 @@ function MatchesPage() {
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -398,7 +375,7 @@ function MatchesPage() {
       </main>
       <Footer />
     </>
-  )
+  );
 }
 
-export default MatchesPage
+export default MatchesPage;

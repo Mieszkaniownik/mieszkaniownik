@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import useUser from "../context/UserContext/useUser";
+
 import { getUserData } from "../api/api";
 import Loading from "../components/Loading";
+import useUser from "../context/UserContext/useUser";
 
 function AuthCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -10,11 +11,7 @@ function AuthCallbackPage() {
   const { login } = useUser();
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    handleCallback();
-  }, []);
-
-  async function handleCallback() {
+  const handleCallback = useCallback(async () => {
     const token = searchParams.get("token");
     const errorParam = searchParams.get("error");
 
@@ -44,17 +41,22 @@ function AuthCallbackPage() {
       setError("Wystąpił błąd podczas logowania. Spróbuj ponownie.");
       setTimeout(() => navigate("/login"), 3000);
     }
-  }
+  }, [searchParams, navigate, login]);
+
+  useEffect(() => {
+    handleCallback();
+  }, [handleCallback]);
 
   return (
-    <div className="w-full flex flex-col justify-center items-center flex-grow min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
+    <div className="flex min-h-screen w-full flex-grow flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100">
+      <div className="mx-4 w-full max-w-md rounded-2xl bg-white p-8 shadow-xl">
         {error ? (
           <>
-            <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            {/* Error Display */}
+            <div className="mb-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
                 <svg
-                  className="w-8 h-8 text-red-600"
+                  className="h-8 w-8 text-red-600"
                   fill="none"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -65,7 +67,7 @@ function AuthCallbackPage() {
                   <path d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
               </div>
-              <h2 className="text-2xl font-bold text-red-600 mb-2">
+              <h2 className="mb-2 text-2xl font-bold text-red-600">
                 Błąd logowania
               </h2>
               <p className="text-gray-600">{error}</p>
@@ -76,9 +78,10 @@ function AuthCallbackPage() {
           </>
         ) : (
           <>
-            <div className="text-center mb-6">
+            {/* Loading Display */}
+            <div className="mb-6 text-center">
               <Loading />
-              <h2 className="text-2xl font-bold text-blue-950 mt-4 mb-2">
+              <h2 className="mt-4 mb-2 text-2xl font-bold text-blue-950">
                 Logowanie przez Google
               </h2>
               <p className="text-gray-600">Przetwarzanie danych...</p>

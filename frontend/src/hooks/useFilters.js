@@ -1,59 +1,59 @@
-import { useState, useCallback } from 'react'
+import { useCallback, useState } from "react";
 
 function useFilters(initialState = {}, onFilterChange) {
-  const [filters, setFilters] = useState(initialState)
-  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState(initialState);
+  const [showFilters, setShowFilters] = useState(false);
 
   const updateFilter = useCallback(
     (key, value) => {
-      const newFilters = { ...filters, [key]: value }
-      setFilters(newFilters)
+      const newFilters = { ...filters, [key]: value };
+      setFilters(newFilters);
       if (onFilterChange) {
-        onFilterChange(newFilters)
+        onFilterChange(newFilters);
       }
     },
-    [filters, onFilterChange]
-  )
+    [filters, onFilterChange],
+  );
 
   const clearFilter = useCallback(
     (key) => {
-      const newFilters = { ...filters }
+      const newFilters = { ...filters };
       if (initialState[key] !== undefined) {
-        newFilters[key] = initialState[key]
+        newFilters[key] = initialState[key];
       } else {
-        delete newFilters[key]
+        delete newFilters[key];
       }
-      setFilters(newFilters)
+      setFilters(newFilters);
       if (onFilterChange) {
-        onFilterChange(newFilters)
+        onFilterChange(newFilters);
       }
     },
-    [filters, initialState, onFilterChange]
-  )
+    [filters, initialState, onFilterChange],
+  );
 
   const clearAllFilters = useCallback(() => {
-    setFilters(initialState)
+    setFilters(initialState);
     if (onFilterChange) {
-      onFilterChange(initialState)
+      onFilterChange(initialState);
     }
-  }, [initialState, onFilterChange])
+  }, [initialState, onFilterChange]);
 
   const toggleShowFilters = useCallback(() => {
-    setShowFilters((prev) => !prev)
-  }, [])
+    setShowFilters((prev) => !prev);
+  }, []);
 
   const getActiveFilters = useCallback(
     (filterConfig) => {
-      const active = []
+      const active = [];
 
       Object.entries(filters).forEach(([key, value]) => {
-        const config = filterConfig[key]
+        const config = filterConfig[key];
         if (
           config &&
           value &&
-          value !== 'ALL' &&
-          value !== 'all' &&
-          value !== ''
+          value !== "ALL" &&
+          value !== "all" &&
+          value !== ""
         ) {
           active.push({
             key,
@@ -61,14 +61,14 @@ function useFilters(initialState = {}, onFilterChange) {
             displayValue: config.getDisplayValue
               ? config.getDisplayValue(value)
               : value,
-          })
+          });
         }
-      })
+      });
 
-      return active
+      return active;
     },
-    [filters]
-  )
+    [filters],
+  );
 
   return {
     filters,
@@ -78,7 +78,7 @@ function useFilters(initialState = {}, onFilterChange) {
     clearAllFilters,
     toggleShowFilters,
     getActiveFilters,
-  }
+  };
 }
 
-export default useFilters
+export default useFilters;

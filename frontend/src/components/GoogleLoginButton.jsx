@@ -1,69 +1,48 @@
-import { useState, useEffect } from 'react'
-import { API_BASE_URL } from '../api/api'
-import Skeleton from './Skeleton'
+import { useEffect, useState } from "react";
 
-function GoogleLoginButton({ text = 'Zaloguj się przez Google' }) {
-  {
-    /* State */
-  }
-  const [available, setAvailable] = useState(false)
-  const [loading, setLoading] = useState(true)
+import { API_BASE_URL } from "../api/api";
+import Skeleton from "./Skeleton";
 
-  {
-    /* Effects */
-  }
+function GoogleLoginButton({ text = "Zaloguj się przez Google" }) {
+  const [available, setAvailable] = useState(false);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    checkGoogleAvailability()
-  }, [])
+    checkGoogleAvailability();
+  }, []);
 
-  {
-    /* API Calls */
-  }
   async function checkGoogleAvailability() {
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/google/available`)
-      const data = await res.json()
-      setAvailable(data.available)
+      const res = await fetch(`${API_BASE_URL}/auth/google/available`);
+      const data = await res.json();
+      setAvailable(data.available);
     } catch (err) {
-      console.error('Failed to check Google OAuth availability:', err)
-      setAvailable(false)
+      console.error("Failed to check Google OAuth availability:", err);
+      setAvailable(false);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  {
-    /* Handlers */
-  }
   function handleGoogleLogin() {
-    window.location.href = `${API_BASE_URL}/auth/google`
+    window.location.href = `${API_BASE_URL}/auth/google`;
   }
 
-  {
-    /* Render - Loading State */
-  }
   if (loading) {
-    return <Skeleton className="w-full h-12 rounded-lg" />
+    return <Skeleton className="h-12 w-full rounded-lg" />;
   }
 
-  {
-    /* Render - Not Available */
-  }
   if (!available) {
-    return null
-  }
-
-  {
-    /* Render - Main */
+    return null;
   }
   return (
     <button
       onClick={handleGoogleLogin}
       type="button"
-      className="w-full flex items-center justify-center gap-3 bg-white text-gray-700 border-2 border-gray-300 rounded-lg px-6 py-3 font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 shadow-sm hover:shadow-md"
+      className="flex w-full items-center justify-center gap-3 rounded-lg border-2 border-gray-300 bg-white px-6 py-3 font-semibold text-gray-700 shadow-sm transition-all duration-200 hover:border-gray-400 hover:bg-gray-50 hover:shadow-md"
     >
       <svg
-        className="w-5 h-5"
+        className="h-5 w-5"
         viewBox="0 0 24 24"
         xmlns="http://www.w3.org/2000/svg"
       >
@@ -86,7 +65,7 @@ function GoogleLoginButton({ text = 'Zaloguj się przez Google' }) {
       </svg>
       {text}
     </button>
-  )
+  );
 }
 
-export default GoogleLoginButton
+export default GoogleLoginButton;

@@ -1,31 +1,26 @@
-import { Link } from 'react-router-dom'
-import { X } from 'lucide-react'
-import Logo from './Logo'
-import { menuItems } from '../constants/menuItems'
+import { X } from "lucide-react";
+import { Link } from "react-router-dom";
+
+import { menuItems } from "../constants/menuItems";
+import Logo from "./Logo";
 
 function MobileMenu({ setMenuOpen, user }) {
-  {
-    /* Handlers */
-  }
   const closeMenu = () => {
-    setMenuOpen(false)
-  }
+    setMenuOpen(false);
+  };
 
-  {
-    /* Render */
-  }
   return (
-    <menu className="fixed top-0 left-0 w-full min-h-screen bg-blue-950 text-white p-6 flex flex-col z-50">
-      <div className="flex flex-row justify-between items-center">
+    <menu className="fixed top-0 left-0 z-50 flex min-h-screen w-full flex-col bg-blue-950 p-6 text-white">
+      <div className="flex flex-row items-center justify-between">
         <Logo onClick={closeMenu} isMobile={true} />
-        <X className="w-10 h-10 " onClick={closeMenu} />
+        <X className="h-10 w-10" onClick={closeMenu} />
       </div>
-      <ul className="flex flex-col align-middle items-center text-center uppercase mt-10 text-2xl font-semibold">
+      <ul className="mt-10 flex flex-col items-center text-center align-middle text-2xl font-semibold uppercase">
         {menuItems
           .filter((item, index) => user || index === 0)
           .map((item, key) => (
             <li
-              className="p-6 w-full border-b border-blue-100 last:border-none"
+              className="w-full border-b border-blue-100 p-6 last:border-none"
               onClick={closeMenu}
               key={key}
             >
@@ -34,7 +29,7 @@ function MobileMenu({ setMenuOpen, user }) {
           ))}
       </ul>
     </menu>
-  )
+  );
 }
 
-export default MobileMenu
+export default MobileMenu;

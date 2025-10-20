@@ -1,0 +1,26 @@
+apiVersion: v2
+name: mieszkaniownik-frontend
+description: A Helm chart for Mieszkaniownik Frontend - React/Vite application
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+maintainers:
+  - name: solvro
+    url: https://github.com/Mieszkaniownik/mieszkaniownik-frontend
+
+home: https://github.com/Mieszkaniownik/mieszkaniownik-frontend
+sources:
+  - https://github.com/Mieszkaniownik/mieszkaniownik-frontend
+
+keywords:
+  - webapp
+  - property
+  - rental
+  - frontend
+  - react
+  - vite
+  - spa
+  - ui
+
+dependencies: []

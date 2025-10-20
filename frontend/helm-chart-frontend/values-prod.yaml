@@ -1,0 +1,81 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets:
+    - name: prod-registry-secret
+
+frontend:
+  replicaCount: 5
+
+  image:
+    tag: "v1.0.0"
+    pullPolicy: IfNotPresent
+
+  env:
+    NODE_ENV: production
+    VITE_API_URL: "https://api.mieszkaniownik.com"
+    VITE_ENABLE_DEBUG: "false"
+    VITE_LOG_LEVEL: "error"
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+config:
+  api:
+    baseUrl: "https://api.mieszkaniownik.com"
+    timeout: 30000
+  features:
+    enableAnalytics: true
+    enableNotifications: true
+    enableDarkMode: true
+    enableDebugMode: false
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  hosts:
+    - host: mieszkaniownik.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+    - host: www.mieszkaniownik.com
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: mieszkaniownik-prod-tls
+      hosts:
+        - mieszkaniownik.com
+        - www.mieszkaniownik.com
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 101
+  fsGroup: 101
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 101
+  capabilities:
+    drop:
+      - ALL
+
+networkPolicy:
+  enabled: true

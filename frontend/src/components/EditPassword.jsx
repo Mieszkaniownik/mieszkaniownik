@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router-dom";
-import useUser from "../context/UserContext/useUser";
 import { useEffect, useState } from "react";
-import Button from "./Button";
+import { useNavigate } from "react-router-dom";
+
 import { editUser, getUserData } from "../api/api";
+import useUser from "../context/UserContext/useUser";
+import Button from "./Button";
 import Loading from "./Loading";
 import PasswordField from "./PasswordField";
 
@@ -58,21 +59,21 @@ function EditPassword() {
 
   if (!user && sessionStorage.getItem("mieszkaniownik:token")) {
     return (
-      <main className="flex flex-1 justify-center items-center">
+      <main className="flex flex-1 items-center justify-center">
         <Loading />
       </main>
     );
   }
 
   return (
-    <main className="w-full flex flex-1 justify-center items-center flex-col p-5 mt-16">
-      <div className="flex flex-col justify-center items-center max-w-md w-full gap-1 p-4 h-auto">
-        <div className="flex flex-col gap-4 w-full border-gray-200 rounded-xl border p-4 shadow-sm">
-          <div className="gap-1 flex flex-col">
-            <h1 className="font-semibold text-xl text-blue-950 ">
+    <main className="mt-16 flex w-full flex-1 flex-col items-center justify-center p-5">
+      <div className="flex h-auto w-full max-w-md flex-col items-center justify-center gap-1 p-4">
+        <div className="flex w-full flex-col gap-4 rounded-xl border border-gray-200 p-4 shadow-sm">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-xl font-semibold text-blue-950">
               Zmiana hasła
             </h1>
-            <p className="text-gray-500 text-sm">Edytuj swoje hasło do konta</p>
+            <p className="text-sm text-gray-500">Edytuj swoje hasło do konta</p>
           </div>
 
           <form className="flex flex-col gap-4" onSubmit={handleSubmit}>

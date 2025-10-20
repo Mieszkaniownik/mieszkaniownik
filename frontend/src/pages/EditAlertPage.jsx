@@ -1,186 +1,194 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import Header from '../components/Header'
-import Footer from '../components/Footer'
-import useUser from '../context/UserContext/useUser'
-import { apiGet, apiPatch } from '../api/api'
-import { ArrowLeft, CirclePlus, Loader2 } from 'lucide-react'
-import Button from '../components/Button'
+import { ArrowLeft, CirclePlus, Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { apiGet, apiPatch } from "../api/api";
+import Button from "../components/Button";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
+import useUser from "../context/UserContext/useUser";
 
 function EditAlertPage() {
-  const navigate = useNavigate()
-  const { id } = useParams()
-  const { user } = useUser()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [alert, setAlert] = useState(null)
-  const [keywords, setKeywords] = useState([])
-  const [keywordInput, setKeywordInput] = useState('')
+  const navigate = useNavigate();
+  const { id } = useParams();
+  const { user } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [alert, setAlert] = useState(null);
+  const [keywords, setKeywords] = useState([]);
+  const [keywordInput, setKeywordInput] = useState("");
 
   const fetchAlert = useCallback(async () => {
     try {
-      setLoading(true)
-      const data = await apiGet(`/alerts/${id}`)
-      setAlert(data)
+      setLoading(true);
+      const data = await apiGet(`/alerts/${id}`);
+      setAlert(data);
       if (data.keywords) {
-        setKeywords(data.keywords)
+        setKeywords(data.keywords);
       }
     } catch (err) {
-      alert('Błąd: Nie udało się pobrać alertu')
-      console.error(err)
-      navigate('/alerts')
+      alert("Błąd: Nie udało się pobrać alertu");
+      console.error(err);
+      navigate("/alerts");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [id, navigate])
+  }, [id, navigate, alert]);
 
   useEffect(() => {
-    if (!user && !sessionStorage.getItem('mieszkaniownik:token')) {
-      navigate('/login', { replace: true })
-      return
+    if (!user && !sessionStorage.getItem("mieszkaniownik:token")) {
+      navigate("/login", { replace: true });
+      return;
     }
-    fetchAlert()
-  }, [user, navigate, fetchAlert])
+    fetchAlert();
+  }, [user, navigate, fetchAlert]);
 
   async function handleSubmit(e) {
-    e.preventDefault()
-    setSaving(true)
+    e.preventDefault();
+    setSaving(true);
 
-    const formData = new FormData(e.target)
+    const formData = new FormData(e.target);
 
     const alertData = {
-      name: formData.get('name'),
-      city: formData.get('city'),
-      district: formData.get('district') || undefined,
-      minPrice: formData.get('minPrice')
-        ? parseFloat(formData.get('minPrice'))
+      name: formData.get("name"),
+      city: formData.get("city"),
+      district: formData.get("district") || undefined,
+      minPrice: formData.get("minPrice")
+        ? parseFloat(formData.get("minPrice"))
         : undefined,
-      maxPrice: formData.get('maxPrice')
-        ? parseFloat(formData.get('maxPrice'))
+      maxPrice: formData.get("maxPrice")
+        ? parseFloat(formData.get("maxPrice"))
         : undefined,
-      minFootage: formData.get('minFootage')
-        ? parseFloat(formData.get('minFootage'))
+      minFootage: formData.get("minFootage")
+        ? parseFloat(formData.get("minFootage"))
         : undefined,
-      maxFootage: formData.get('maxFootage')
-        ? parseFloat(formData.get('maxFootage'))
+      maxFootage: formData.get("maxFootage")
+        ? parseFloat(formData.get("maxFootage"))
         : undefined,
-      minRooms: formData.get('minRooms')
-        ? parseInt(formData.get('minRooms'))
+      minRooms: formData.get("minRooms")
+        ? parseInt(formData.get("minRooms"))
         : undefined,
-      maxRooms: formData.get('maxRooms')
-        ? parseInt(formData.get('maxRooms'))
+      maxRooms: formData.get("maxRooms")
+        ? parseInt(formData.get("maxRooms"))
         : undefined,
-      minFloor: formData.get('minFloor')
-        ? parseInt(formData.get('minFloor'))
+      minFloor: formData.get("minFloor")
+        ? parseInt(formData.get("minFloor"))
         : undefined,
-      maxFloor: formData.get('maxFloor')
-        ? parseInt(formData.get('maxFloor'))
+      maxFloor: formData.get("maxFloor")
+        ? parseInt(formData.get("maxFloor"))
         : undefined,
-      ownerType: formData.get('ownerType') || undefined,
-      buildingType: formData.get('buildingType') || undefined,
-      parkingType: formData.get('parkingType') || undefined,
-      elevator: formData.get('elevator') === 'true' ? true : undefined,
-      furniture: formData.get('furniture') === 'true' ? true : undefined,
-      pets: formData.get('pets') === 'true' ? true : undefined,
+      ownerType: formData.get("ownerType") || undefined,
+      buildingType: formData.get("buildingType") || undefined,
+      parkingType: formData.get("parkingType") || undefined,
+      elevator: formData.get("elevator") === "true" ? true : undefined,
+      furniture: formData.get("furniture") === "true" ? true : undefined,
+      pets: formData.get("pets") === "true" ? true : undefined,
       keywords: keywords.length > 0 ? keywords : undefined,
-      discordWebhook: formData.get('discordWebhook') || undefined,
-      notificationMethod: formData.get('notificationMethod') || 'EMAIL',
-    }
+      discordWebhook: formData.get("discordWebhook") || undefined,
+      notificationMethod: formData.get("notificationMethod") || "EMAIL",
+    };
 
     Object.keys(alertData).forEach(
-      (key) => alertData[key] === undefined && delete alertData[key]
-    )
+      (key) => alertData[key] === undefined && delete alertData[key],
+    );
 
     try {
-      await apiPatch(`/alerts/${id}`, alertData)
-      navigate(`/matches?alert=${id}`)
+      await apiPatch(`/alerts/${id}`, alertData);
+      navigate(`/matches?alert=${id}`);
     } catch (err) {
-      alert('Błąd: Nie udało się zaktualizować alertu')
-      console.error(err)
+      alert("Błąd: Nie udało się zaktualizować alertu");
+      console.error(err);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   function addKeyword() {
     if (keywordInput.trim() && !keywords.includes(keywordInput.trim())) {
-      setKeywords([...keywords, keywordInput.trim()])
-      setKeywordInput('')
+      setKeywords([...keywords, keywordInput.trim()]);
+      setKeywordInput("");
     }
   }
 
   function removeKeyword(keyword) {
-    setKeywords(keywords.filter((k) => k !== keyword))
+    setKeywords(keywords.filter((k) => k !== keyword));
   }
 
   if (loading) {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-          <div className="max-w-4xl w-full">
-            <div className="flex items-center justify-center h-64">
+        {/* Loading State */}
+        <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+          <div className="w-full max-w-4xl">
+            <div className="flex h-64 items-center justify-center">
               <Loader2 size={48} className="animate-spin text-blue-600" />
             </div>
           </div>
         </main>
         <Footer />
       </>
-    )
+    );
   }
 
   if (!alert) {
     return (
       <>
         <Header />
-        <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-          <div className="max-w-4xl w-full">
+        {/* Error State */}
+        <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+          <div className="w-full max-w-4xl">
+            {/* Back Button */}
             <button
-              onClick={() => navigate('/alerts')}
-              className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition mb-6"
+              onClick={() => navigate("/alerts")}
+              className="mb-6 flex items-center gap-2 text-blue-950 transition hover:text-blue-700"
             >
               <ArrowLeft size={20} />
               Powrót do alertów
             </button>
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <div className="rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700">
               Alert nie został znaleziony
             </div>
           </div>
         </main>
         <Footer />
       </>
-    )
+    );
   }
 
   return (
     <>
       <Header />
-      <main className="w-full flex flex-col items-center flex-grow min-h-[80vh] p-8 mt-16">
-        <div className="max-w-4xl w-full">
+      <main className="mt-16 flex min-h-[80vh] w-full flex-grow flex-col items-center p-8">
+        <div className="w-full max-w-4xl">
+          {/* Back Button */}
           <button
             onClick={() => navigate(`/alerts`)}
-            className="flex items-center gap-2 text-blue-950 hover:text-blue-700 transition mb-6"
+            className="mb-6 flex items-center gap-2 text-blue-950 transition hover:text-blue-700"
           >
             <ArrowLeft size={20} />
             Powrót do alertów
           </button>
 
+          {/* Edit Alert Form */}
           <form
             onSubmit={handleSubmit}
-            className="w-full bg-white border border-gray-200 rounded-lg px-4 md:px-6 py-6 shadow-sm"
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-6 shadow-sm md:px-6"
           >
-            <h1 className="text-xl md:text-2xl font-bold text-blue-950 mb-2">
+            {/* Form Header */}
+            <h1 className="mb-2 text-xl font-bold text-blue-950 md:text-2xl">
               Edytuj alert
             </h1>
-            <p className="text-gray-600 mb-4 text-sm md:text-base">
+            <p className="mb-4 text-sm text-gray-600 md:text-base">
               Zmień parametry swojego alertu
             </p>
 
-            <div className="w-full grid grid-cols-1 gap-4">
+            {/* Basic Information */}
+            <div className="grid w-full grid-cols-1 gap-4">
               <div className="w-full">
                 <label
                   htmlFor="name"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Nazwa alertu*
                 </label>
@@ -195,11 +203,11 @@ function EditAlertPage() {
                 />
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div>
                   <label
                     htmlFor="city"
-                    className="text-sm font-medium text-blue-950 mb-2"
+                    className="mb-2 text-sm font-medium text-blue-950"
                   >
                     Miasto*
                   </label>
@@ -216,7 +224,7 @@ function EditAlertPage() {
                 <div>
                   <label
                     htmlFor="district"
-                    className="text-sm font-medium text-blue-950 mb-2"
+                    className="mb-2 text-sm font-medium text-blue-950"
                   >
                     Dzielnica
                   </label>
@@ -224,7 +232,7 @@ function EditAlertPage() {
                     type="text"
                     id="district"
                     name="district"
-                    defaultValue={alert.district || ''}
+                    defaultValue={alert.district || ""}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="np. Stare Miasto"
                   />
@@ -232,16 +240,16 @@ function EditAlertPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Cena (zł)
                 </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minPrice"
                     min="0"
                     step="0.01"
-                    defaultValue={alert.minPrice || ''}
+                    defaultValue={alert.minPrice || ""}
                     className="rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
                   />
@@ -250,24 +258,25 @@ function EditAlertPage() {
                     name="maxPrice"
                     min="0"
                     step="0.01"
-                    defaultValue={alert.maxPrice || ''}
+                    defaultValue={alert.maxPrice || ""}
                     className="rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Do"
                   />
                 </div>
               </div>
 
+              {/* Property Parameters Section */}
               <div>
-                <label className=" text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Metraż (m²)
                 </label>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minFootage"
                     min="0"
                     step="0.01"
-                    defaultValue={alert.minFootage || ''}
+                    defaultValue={alert.minFootage || ""}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
                   />
@@ -276,7 +285,7 @@ function EditAlertPage() {
                     name="maxFootage"
                     min="0"
                     step="0.01"
-                    defaultValue={alert.maxFootage || ''}
+                    defaultValue={alert.maxFootage || ""}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Do"
                   />
@@ -284,16 +293,16 @@ function EditAlertPage() {
               </div>
 
               <div>
-                <label className=" text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Liczba pokoi
                 </label>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minRooms"
                     min="1"
                     max="20"
-                    defaultValue={alert.minRooms || ''}
+                    defaultValue={alert.minRooms || ""}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
                   />
@@ -302,7 +311,7 @@ function EditAlertPage() {
                     name="maxRooms"
                     min="1"
                     max="20"
-                    defaultValue={alert.maxRooms || ''}
+                    defaultValue={alert.maxRooms || ""}
                     className="w-full rounded-lg border border-gray-300 p-3"
                     placeholder="Do"
                   />
@@ -310,10 +319,10 @@ function EditAlertPage() {
               </div>
 
               <div>
-                <label className="text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Piętro
                 </label>
-                <div className="grid md:grid-cols-2 gap-4">
+                <div className="grid gap-4 md:grid-cols-2">
                   <input
                     type="number"
                     name="minFloor"
@@ -322,7 +331,7 @@ function EditAlertPage() {
                     defaultValue={
                       alert.minFloor !== null && alert.minFloor !== undefined
                         ? alert.minFloor
-                        : ''
+                        : ""
                     }
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Od"
@@ -332,7 +341,7 @@ function EditAlertPage() {
                     name="maxFloor"
                     min="0"
                     max="50"
-                    defaultValue={alert.maxFloor || ''}
+                    defaultValue={alert.maxFloor || ""}
                     className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="Do"
                   />
@@ -342,14 +351,14 @@ function EditAlertPage() {
               <div>
                 <label
                   htmlFor="ownerType"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Typ właściciela
                 </label>
                 <select
                   id="ownerType"
                   name="ownerType"
-                  defaultValue={alert.ownerType || ''}
+                  defaultValue={alert.ownerType || ""}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="">Dowolny</option>
@@ -362,14 +371,14 @@ function EditAlertPage() {
               <div>
                 <label
                   htmlFor="buildingType"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Typ budynku
                 </label>
                 <select
                   id="buildingType"
                   name="buildingType"
-                  defaultValue={alert.buildingType || ''}
+                  defaultValue={alert.buildingType || ""}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="">Dowolny</option>
@@ -386,14 +395,14 @@ function EditAlertPage() {
               <div>
                 <label
                   htmlFor="parkingType"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Parking
                 </label>
                 <select
                   id="parkingType"
                   name="parkingType"
-                  defaultValue={alert.parkingType || ''}
+                  defaultValue={alert.parkingType || ""}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="">Dowolny</option>
@@ -404,15 +413,16 @@ function EditAlertPage() {
                 </select>
               </div>
 
+              {/* Preferences Section */}
               <div>
-                <label className="text-sm font-medium text-blue-950 mb-2">
+                <label className="mb-2 text-sm font-medium text-blue-950">
                   Dodatkowe wymagania
                 </label>
-                <div className="grid md:grid-cols-3 gap-4">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div>
                     <label
                       htmlFor="elevator"
-                      className="text-sm text-gray-700 mb-1"
+                      className="mb-1 text-sm text-gray-700"
                     >
                       Winda
                     </label>
@@ -421,10 +431,10 @@ function EditAlertPage() {
                       name="elevator"
                       defaultValue={
                         alert.elevator === null
-                          ? ''
+                          ? ""
                           : alert.elevator
-                          ? 'true'
-                          : 'false'
+                            ? "true"
+                            : "false"
                       }
                       className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     >
@@ -436,7 +446,7 @@ function EditAlertPage() {
                   <div>
                     <label
                       htmlFor="furniture"
-                      className="text-sm text-gray-700 mb-1"
+                      className="mb-1 text-sm text-gray-700"
                     >
                       Umeblowane
                     </label>
@@ -445,10 +455,10 @@ function EditAlertPage() {
                       name="furniture"
                       defaultValue={
                         alert.furniture === null
-                          ? ''
+                          ? ""
                           : alert.furniture
-                          ? 'true'
-                          : 'false'
+                            ? "true"
+                            : "false"
                       }
                       className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     >
@@ -460,7 +470,7 @@ function EditAlertPage() {
                   <div>
                     <label
                       htmlFor="pets"
-                      className="text-sm text-gray-700 mb-1"
+                      className="mb-1 text-sm text-gray-700"
                     >
                       Zwierzęta
                     </label>
@@ -468,7 +478,7 @@ function EditAlertPage() {
                       id="pets"
                       name="pets"
                       defaultValue={
-                        alert.pets === null ? '' : alert.pets ? 'true' : 'false'
+                        alert.pets === null ? "" : alert.pets ? "true" : "false"
                       }
                       className="w-full rounded-lg border border-solid border-gray-300 p-2"
                     >
@@ -480,10 +490,11 @@ function EditAlertPage() {
                 </div>
               </div>
 
-              <div className="w-full flex flex-col">
+              {/* Keywords Section */}
+              <div className="flex w-full flex-col">
                 <label
                   htmlFor="keywordInput"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Słowa kluczowe
                 </label>
@@ -495,7 +506,7 @@ function EditAlertPage() {
                     value={keywordInput}
                     onChange={(e) => setKeywordInput(e.target.value)}
                     onKeyPress={(e) =>
-                      e.key === 'Enter' && (e.preventDefault(), addKeyword())
+                      e.key === "Enter" && (e.preventDefault(), addKeyword())
                     }
                     className="min-w-0 flex-1 rounded-lg border border-solid border-gray-300 p-2"
                     placeholder="np. balkon, blisko metra"
@@ -503,18 +514,18 @@ function EditAlertPage() {
                   <button
                     type="button"
                     onClick={addKeyword}
-                    className="flex-shrink-0 bg-blue-600 text-white px-4 rounded-lg hover:bg-blue-700"
+                    className="flex-shrink-0 rounded-lg bg-blue-600 px-4 text-white hover:bg-blue-700"
                   >
                     <span className="hidden md:inline">Dodaj</span>
                     <CirclePlus className="md:hidden" size={16} />
                   </button>
                 </div>
                 {keywords.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     {keywords.map((keyword) => (
                       <span
                         key={keyword}
-                        className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+                        className="flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800"
                       >
                         {keyword}
                         <button
@@ -533,14 +544,14 @@ function EditAlertPage() {
               <div>
                 <label
                   htmlFor="notificationMethod"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Sposób powiadamiania
                 </label>
                 <select
                   id="notificationMethod"
                   name="notificationMethod"
-                  defaultValue={alert.notificationMethod || 'EMAIL'}
+                  defaultValue={alert.notificationMethod || "EMAIL"}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                 >
                   <option value="EMAIL">Email</option>
@@ -552,7 +563,7 @@ function EditAlertPage() {
               <div>
                 <label
                   htmlFor="discordWebhook"
-                  className="text-sm font-medium text-blue-950 mb-2"
+                  className="mb-2 text-sm font-medium text-blue-950"
                 >
                   Discord Webhook URL (opcjonalnie)
                 </label>
@@ -560,12 +571,13 @@ function EditAlertPage() {
                   type="url"
                   id="discordWebhook"
                   name="discordWebhook"
-                  defaultValue={alert.discordWebhook || ''}
+                  defaultValue={alert.discordWebhook || ""}
                   className="w-full rounded-lg border border-solid border-gray-300 p-2"
                   placeholder="https://discord.com/api/webhooks/..."
                 />
               </div>
 
+              {/* Form Actions */}
               <div className="flex gap-4 pt-2">
                 <Button type="submit" loading={saving} className="flex-1">
                   Zapisz <span className="hidden sm:inline">zmiany</span>
@@ -584,7 +596,7 @@ function EditAlertPage() {
       </main>
       <Footer />
     </>
-  )
+  );
 }
 
-export default EditAlertPage
+export default EditAlertPage;

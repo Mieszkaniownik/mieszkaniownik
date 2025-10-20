@@ -1,0 +1,113 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mieszkaniownik-frontend.fullname" . }}
+  labels:
+    {{- include "mieszkaniownik-frontend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.frontend.replicaCount }}
+  {{- end }}
+  strategy:
+    {{- toYaml .Values.frontend.strategy | nindent 4 }}
+  revisionHistoryLimit: {{ .Values.frontend.revisionHistoryLimit }}
+  selector:
+    matchLabels:
+      {{- include "mieszkaniownik-frontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- if .Values.frontend.nginx.configMap.enabled }}
+        checksum/nginx-config: {{ include (print $.Template.BasePath "/nginx-configmap.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "mieszkaniownik-frontend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mieszkaniownik-frontend.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Values.frontend.name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.global.imageRegistry }}{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - name: {{ .Values.frontend.service.name }}
+              containerPort: {{ .Values.frontend.service.targetPort }}
+              protocol: TCP
+          
+          {{- if .Values.frontend.healthChecks.enabled }}
+          livenessProbe:
+            {{- toYaml .Values.frontend.healthChecks.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.frontend.healthChecks.readinessProbe | nindent 12 }}
+          {{- end }}
+          
+          env:
+            {{- range $key, $value := .Values.frontend.env }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          
+          envFrom:
+            {{- if .Values.config }}
+            - configMapRef:
+                name: {{ include "mieszkaniownik-frontend.configName" . }}
+            {{- end }}
+          
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+          
+          volumeMounts:
+            {{- if .Values.securityContext.readOnlyRootFilesystem }}
+            - name: tmp
+              mountPath: /tmp
+            - name: var-cache
+              mountPath: /var/cache/nginx
+            - name: var-run
+              mountPath: /var/run
+            {{- end }}
+            {{- if .Values.frontend.nginx.configMap.enabled }}
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            {{- end }}
+      
+      volumes:
+        {{- if .Values.securityContext.readOnlyRootFilesystem }}
+        - name: tmp
+          emptyDir: {}
+        - name: var-cache
+          emptyDir: {}
+        - name: var-run
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.frontend.nginx.configMap.enabled }}
+        - name: nginx-config
+          configMap:
+            name: {{ include "mieszkaniownik-frontend.nginxConfigName" . }}
+        {{- end }}
+      
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
