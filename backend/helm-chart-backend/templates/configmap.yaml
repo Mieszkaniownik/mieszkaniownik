@@ -6,6 +6,9 @@ metadata:
   labels:
     {{- include "mieszkaniownik-backend.labels" . | nindent 4 }}
 data:
+  {{- if .Values.config.frontend }}
+  FRONTEND_URL: {{ .Values.config.frontend.url | quote }}
+  {{- end }}
   {{- if .Values.config.database }}
   DB_MAX_CONNECTIONS: {{ .Values.config.database.maxConnections | quote }}
   DB_SSL: {{ .Values.config.database.ssl | quote }}

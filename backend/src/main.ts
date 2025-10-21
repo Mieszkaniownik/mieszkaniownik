@@ -37,21 +37,49 @@ async function bootstrap() {
         return;
       }
 
-      const localhostPattern = /^https?:\/\/localhost:(50\d{2}|5[1-5]\d{2})$/;
+      // Allow localhost with common development ports (3000-9999)
+      const localhostPattern = /^https?:\/\/localhost:[3-9]\d{3}$/;
+      // Allow local IP addresses with common development ports
       const ipPattern =
-        /^https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:(50\d{2}|5[1-5]\d{2})$/;
+        /^https?:\/\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:[3-9]\d{3}$/;
+
+      // Build allowed domains list from environment variables
       const allowedDomains = [
+        "http://localhost:5173",
+        "http://localhost:5001",
         "http://mieszkaniownik-dev.local",
         "http://mieszkaniownik-prod.local",
       ];
 
+      // Add FRONTEND_URL from environment if set
+      const frontendUrl = process.env.FRONTEND_URL;
+      if (frontendUrl !== undefined && frontendUrl !== "") {
+        allowedDomains.push(frontendUrl, frontendUrl.replace(/\/$/, ""));
+      }
+
+      // Add production domains
+      const productionDomains = [
+        "https://mieszkaniownik.com",
+        "https://www.mieszkaniownik.com",
+        "https://dev.mieszkaniownik.com",
+        "https://api.mieszkaniownik.com",
+        "https://api-dev.mieszkaniownik.com",
+      ];
+
+      const allAllowedOrigins = [...allowedDomains, ...productionDomains];
+
       if (
         localhostPattern.test(origin) ||
         ipPattern.test(origin) ||
-        allowedDomains.includes(origin)
+        allAllowedOrigins.includes(origin)
       ) {
         callback(null, true);
         return;
+      }
+
+      // Log rejected origins in development for debugging
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`CORS blocked origin: ${origin}`);
       }
 
       callback(new Error("Not allowed by CORS"), false);

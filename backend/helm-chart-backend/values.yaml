@@ -156,11 +156,14 @@ secrets:
     JWT_SECRET: ""
     GOOGLE_CLIENT_ID: ""
     GOOGLE_CLIENT_SECRET: ""
+    GOOGLE_CALLBACK_URL: ""
     DISCORD_WEBHOOK_URL: ""
     EMAIL_USER: ""
     EMAIL_PASS: ""
 
 config:
+  frontend:
+    url: "http://localhost:5173"
   database:
     maxConnections: 10
     ssl: false
