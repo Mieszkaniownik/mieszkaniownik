@@ -69,11 +69,14 @@ secrets:
     JWT_SECRET: ""
     GOOGLE_CLIENT_ID: ""
     GOOGLE_CLIENT_SECRET: ""
+    GOOGLE_CALLBACK_URL: "https://api.mieszkaniownik.com/auth/google/callback"
     DISCORD_WEBHOOK_URL: ""
     EMAIL_USER: ""
     EMAIL_PASS: ""
 
 config:
+  frontend:
+    url: "https://mieszkaniownik.com"
   database:
     maxConnections: 20
     ssl: true
