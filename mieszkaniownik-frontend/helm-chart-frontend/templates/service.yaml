@@ -1,0 +1,17 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "mieszkaniownik-frontend.fullname" . }}
+  labels:
+    {{- include "mieszkaniownik-frontend.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.frontend.service.type }}
+  ports:
+    - port: {{ .Values.frontend.service.port }}
+      targetPort: {{ .Values.frontend.service.name }}
+      protocol: TCP
+      name: {{ .Values.frontend.service.name }}
+  selector:
+    {{- include "mieszkaniownik-frontend.selectorLabels" . | nindent 4 }}
+{{- end }}

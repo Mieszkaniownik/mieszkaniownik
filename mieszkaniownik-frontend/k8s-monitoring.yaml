@@ -1,0 +1,230 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: production
+  labels:
+    grafana_dashboard: "1"
+data:
+  frontend-dashboard.json: |
+    {
+      "dashboard": {
+        "title": "Mieszkaniownik Frontend Monitoring",
+        "panels": [
+          {
+            "title": "Request Rate",
+            "targets": [
+              {
+                "expr": "rate(nginx_http_requests_total[5m])"
+              }
+            ]
+          },
+          {
+            "title": "Response Time",
+            "targets": [
+              {
+                "expr": "histogram_quantile(0.95, nginx_http_request_duration_seconds_bucket)"
+              }
+            ]
+          },
+          {
+            "title": "Error Rate",
+            "targets": [
+              {
+                "expr": "rate(nginx_http_requests_total{status=~\"5..\"}[5m])"
+              }
+            ]
+          },
+          {
+            "title": "Active Connections",
+            "targets": [
+              {
+                "expr": "nginx_connections_active"
+              }
+            ]
+          }
+        ]
+      }
+    }
+
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mieszkaniownik-frontend
+  namespace: production
+  labels:
+    app: mieszkaniownik-frontend
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: mieszkaniownik-frontend
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: mieszkaniownik-frontend-alerts
+  namespace: production
+spec:
+  groups:
+  - name: frontend
+    interval: 30s
+    rules:
+    - alert: FrontendHighErrorRate
+      expr: |
+        rate(nginx_http_requests_total{status=~"5.."}[5m]) > 0.05
+      for: 5m
+      labels:
+        severity: critical
+        component: frontend
+      annotations:
+        summary: "High error rate detected in frontend"
+        description: "Frontend error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+    
+    - alert: FrontendHighResponseTime
+      expr: |
+        histogram_quantile(0.95, rate(nginx_http_request_duration_seconds_bucket[5m])) > 2
+      for: 5m
+      labels:
+        severity: warning
+        component: frontend
+      annotations:
+        summary: "High response time detected in frontend"
+        description: "95th percentile response time is {{ $value }}s (threshold: 2s)"
+    
+    - alert: FrontendPodDown
+      expr: |
+        kube_deployment_status_replicas_available{deployment="mieszkaniownik-frontend"} < 2
+      for: 5m
+      labels:
+        severity: critical
+        component: frontend
+      annotations:
+        summary: "Frontend has insufficient replicas"
+        description: "Only {{ $value }} frontend pods are available (minimum: 2)"
+    
+    - alert: FrontendCPUHigh
+      expr: |
+        rate(container_cpu_usage_seconds_total{pod=~"mieszkaniownik-frontend-.*"}[5m]) > 0.8
+      for: 10m
+      labels:
+        severity: warning
+        component: frontend
+      annotations:
+        summary: "High CPU usage in frontend pod"
+        description: "CPU usage is {{ $value | humanizePercentage }} (threshold: 80%)"
+    
+    - alert: FrontendMemoryHigh
+      expr: |
+        container_memory_usage_bytes{pod=~"mieszkaniownik-frontend-.*"} / container_spec_memory_limit_bytes{pod=~"mieszkaniownik-frontend-.*"} > 0.9
+      for: 10m
+      labels:
+        severity: warning
+        component: frontend
+      annotations:
+        summary: "High memory usage in frontend pod"
+        description: "Memory usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: production
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush         5
+        Log_Level     info
+        Daemon        off
+        
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/mieszkaniownik-frontend-*.log
+        Parser            docker
+        Tag               frontend.*
+        Refresh_Interval  5
+        
+    [FILTER]
+        Name                kubernetes
+        Match               frontend.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_CA_File        /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+        Kube_Token_File     /var/run/secrets/kubernetes.io/serviceaccount/token
+        
+    [OUTPUT]
+        Name  stackdriver
+        Match *
+        resource k8s_container
+        k8s_cluster_name mieszkaniownik-prod-cluster
+        k8s_cluster_location europe-central2-a
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: alertmanager-config
+  namespace: production
+data:
+  alertmanager.yml: |
+    global:
+      resolve_timeout: 5m
+    
+    route:
+      group_by: ['alertname', 'cluster', 'service']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'default'
+      routes:
+      - match:
+          severity: critical
+        receiver: 'critical'
+      - match:
+          severity: warning
+        receiver: 'warning'
+    
+    receivers:
+    - name: 'default'
+      email_configs:
+      - to: 'mieszkaniownik@gmail.com'
+        from: 'alerts@mieszkaniownik.eu'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'mieszkaniownik@gmail.com'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: '[Mieszkaniownik] Alert: {{ .GroupLabels.alertname }}'
+    
+    - name: 'critical'
+      email_configs:
+      - to: 'mieszkaniownik@gmail.com'
+        from: 'alerts@mieszkaniownik.eu'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'mieszkaniownik@gmail.com'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: '[CRITICAL] {{ .GroupLabels.alertname }}'
+      # Add Slack/Discord webhooks here
+      webhook_configs:
+      - url: '${DISCORD_WEBHOOK_URL}'
+        send_resolved: true
+    
+    - name: 'warning'
+      email_configs:
+      - to: 'mieszkaniownik@gmail.com'
+        from: 'alerts@mieszkaniownik.eu'
+        smarthost: 'smtp.gmail.com:587'
+        auth_username: 'mieszkaniownik@gmail.com'
+        auth_password: '${SMTP_PASSWORD}'
+        headers:
+          Subject: '[Warning] {{ .GroupLabels.alertname }}'

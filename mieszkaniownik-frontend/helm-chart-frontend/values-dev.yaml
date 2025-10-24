@@ -1,0 +1,58 @@
+global:
+  imageRegistry: "eu.gcr.io/"
+  imagePullSecrets:
+    - name: registry-secret
+
+frontend:
+  replicaCount: 3
+
+  image:
+    tag: "dev-latest"
+    pullPolicy: Always
+
+  env:
+    NODE_ENV: development
+    VITE_API_URL: "https://api.mieszkaniownik.wsparcie.dev"
+    VITE_GOOGLE_MAPS_API_KEY: "${VITE_GOOGLE_MAPS_API_KEY}"
+    VITE_ENABLE_DEBUG: "true"
+    VITE_LOG_LEVEL: "debug"
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+config:
+  api:
+    baseUrl: "https://api.mieszkaniownik.wsparcie.dev"
+    timeout: 10000
+  features:
+    enableAnalytics: true
+    enableNotifications: true
+    enableDarkMode: true
+    enableDebugMode: true
+
+ingress:
+  enabled: true
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+  hosts:
+    - host: mieszkaniownik.wsparcie.dev
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: mieszkaniownik-dev-tls
+      hosts:
+        - mieszkaniownik.wsparcie.dev
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70

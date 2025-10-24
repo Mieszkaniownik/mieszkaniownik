@@ -1,0 +1,73 @@
+# .gitignore additions for backend deployment files
+
+# Environment files with secrets (keep templates only)
+.env
+.env.local
+.env.*.local
+.env.secret
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
+!terraform/terraform-dev.tfvars.example
+terraform/override.tf
+terraform/override.tf.json
+terraform/*_override.tf
+terraform/*_override.tf.json
+terraform/.terraform.tfstate.lock.info
+terraform/tfplan
+
+# GCP credentials
+*.json
+!package.json
+!package-lock.json
+!tsconfig.json
+!nest-cli.json
+!.vscode/*.json
+gcp-credentials/
+service-account-key.json
+google-credentials.json
+
+# Kubernetes secrets
+k8s-secrets/
+*.secret.yaml
+*-secret.yaml
+
+# Helm
+helm-chart-backend/charts/
+helm-chart-backend/*.tgz
+helm-chart-backend/values-local.yaml
+helm-chart-backend/Chart.lock
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Scripts logs
+scripts/*.log
+*.log
+
+# Docker
+docker-compose.override.yml
+.dockerignore.local
+
+# Cloud Build
+.cloudbuild/
+cloudbuild-local.yaml
+
+# Monitoring & Observability
+grafana-data/
+prometheus-data/
+logs/
+
+# Backups
+backups/
+*.sql.gz
+*.dump
+
+# Local development
+.vscode/settings.json.local
+.idea/

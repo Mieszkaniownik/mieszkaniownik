@@ -1,0 +1,89 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Build artifacts (dist is built inside Docker)
+dist
+build
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# CI/CD
+.github
+.gitlab-ci.yml
+cloudbuild.yaml
+cloudbuild-dev.yaml
+
+# Documentation
+README.md
+*.md
+docs/
+banner.png
+logo.png
+*.png
+dashboard1.png
+heatmap1.png
+heatmap2.png
+main1.png
+matches1.png
+alerts1.png
+notifications1.png
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+.docker
+
+# Kubernetes & Helm
+helm-chart-frontend/
+k8s-*.yaml
+
+# Terraform
+terraform/
+
+# Scripts
+scripts/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Testing
+coverage
+.nyc_output
+
+# Nginx config (except the one needed)
+!nginx.conf

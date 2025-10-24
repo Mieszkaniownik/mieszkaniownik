@@ -1,0 +1,151 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+app:
+  name: mieszkaniownik-frontend
+  version: 1.0.0
+
+frontend:
+  enabled: true
+  name: frontend
+  replicaCount: 2
+
+  image:
+    repository: mieszkaniownik-frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+    name: http
+
+  env:
+    NODE_ENV: production
+    PORT: "80"
+    VITE_API_BASE_URL: "http://mieszkaniownik-backend.default.svc.cluster.local:5001"
+    VITE_APP_TITLE: "Mieszkaniownik"
+
+  backend:
+    serviceName: "mieszkaniownik-backend"
+    namespace: "default"
+    port: 5001
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  healthChecks:
+    enabled: true
+    livenessProbe:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 30
+      periodSeconds: 15
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readinessProbe:
+      httpGet:
+        path: /
+        port: http
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      timeoutSeconds: 3
+      failureThreshold: 3
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 1
+
+  revisionHistoryLimit: 5
+
+  nginx:
+    enabled: true
+    configMap:
+      enabled: true
+      serverName: localhost
+      clientMaxBodySize: 10M
+      gzipEnabled: true
+
+config:
+  api:
+    baseUrl: "http://mieszkaniownik-backend.default.svc.cluster.local:5001"
+    timeout: 30000
+  backend:
+    serviceName: "mieszkaniownik-backend"
+    namespace: "default"
+    port: 5001
+  features:
+    enableAnalytics: false
+    enableNotifications: true
+    enableDarkMode: true
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+  hosts:
+    - host: mieszkaniownik.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: mieszkaniownik-frontend-tls
+      hosts:
+        - mieszkaniownik.local
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 101
+  fsGroup: 101
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 101
+  capabilities:
+    drop:
+      - ALL
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+networkPolicy:
+  enabled: false
+  ingress:
+    - from: []
+      ports:
+        - port: 80
+          protocol: TCP

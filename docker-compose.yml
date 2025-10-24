@@ -1,81 +1,8 @@
 services:
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: mieszkaniownik-backend
-    ports:
-      - "5001:5001"
-    env_file:
-      - ./backend/.env
-    environment:
-      - NODE_ENV=production
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-mieszkaniownik}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    volumes:
-      - ./backend/prisma:/app/prisma
-    networks:
-      - mieszkaniownik-net
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: "4"
-          memory: 4G
-        reservations:
-          cpus: "2"
-          memory: 2G
-    shm_size: "2gb"
-    ulimits:
-      nproc: 65535
-      nofile:
-        soft: 65535
-        hard: 65535
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--tries=1",
-          "--spider",
-          "http://localhost:5001/health",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: mieszkaniownik-frontend
-    ports:
-      - "5173:5173"
-    environment:
-      - NODE_ENV=production
-    env_file:
-      - ./frontend/.env
-    depends_on:
-      backend:
-        condition: service_healthy
-    networks:
-      - mieszkaniownik-net
-    restart: unless-stopped
-
   postgres:
     image: postgres:15-alpine
-    container_name: mieszkaniownik-db
+    container_name: mieszkaniownik-postgres
     restart: always
-    env_file:
-      - ./backend/.env
     environment:
       - POSTGRES_DB=${POSTGRES_DB:-mieszkaniownik}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -85,7 +12,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - mieszkaniownik-net
+      - mieszkaniownik-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
       interval: 10s
@@ -95,23 +22,86 @@ services:
   redis:
     image: redis:7-alpine
     container_name: mieszkaniownik-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - mieszkaniownik-net
-    restart: unless-stopped
+      - mieszkaniownik-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 3s
       retries: 5
 
+  backend:
+    build:
+      context: ./mieszkaniownik-backend
+      dockerfile: Dockerfile
+    container_name: mieszkaniownik-backend
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./mieszkaniownik-backend/.env
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-password}@postgres:5432/${POSTGRES_DB:-mieszkaniownik}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      
+      - RUN_SEED=${RUN_SEED:-true}
+      
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./mieszkaniownik-backend/prisma:/app/prisma
+    networks:
+      - mieszkaniownik-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./mieszkaniownik-frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:5001}
+        - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY:-}
+    container_name: mieszkaniownik-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+    depends_on:
+      - backend
+    networks:
+      - mieszkaniownik-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
 
 networks:
-  mieszkaniownik-net:
+  mieszkaniownik-network:
     driver: bridge
+    name: mieszkaniownik-network

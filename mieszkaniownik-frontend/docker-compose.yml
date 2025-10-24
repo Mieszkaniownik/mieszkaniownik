@@ -1,0 +1,22 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:5001}
+    container_name: mieszkaniownik-frontend
+    ports:
+      - "5173:80"
+    env_file:
+      - .env.development
+    environment:
+      - NODE_ENV=development
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:5001}
+    networks:
+      - mieszkaniownik-frontend-net
+    restart: unless-stopped
+
+networks:
+  mieszkaniownik-frontend-net:
+    driver: bridge
