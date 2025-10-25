@@ -1,5 +1,24 @@
-export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5001";
+// Dynamic API URL detection
+function getApiBaseUrl() {
+  // If VITE_API_BASE_URL is explicitly set, use it
+  if (import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL !== 'auto') {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+  
+  // Auto-detect based on current host
+  const hostname = window.location.hostname;
+  
+  // If running on localhost (development)
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:5001';
+  }
+  
+  // If running on VPS or production (use same host, backend port)
+  const protocol = window.location.protocol;
+  return `${protocol}//${hostname}:5001`;
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 class ApiError extends Error {
   constructor(message, status = null) {
