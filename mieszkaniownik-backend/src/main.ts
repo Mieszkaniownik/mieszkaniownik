@@ -50,6 +50,9 @@ async function bootstrap() {
         "https://mieszkaniownik.wsparcie.dev",
         "https://api.mieszkaniownik.wsparcie.dev",
         "https://app.mieszkaniownik.wsparcie.dev",
+        // VPS IP addresses
+        "http://34.116.180.59:5173",
+        "http://34.118.127.11:5173",
       ];
 
       const envOrigins =
