@@ -25,6 +25,20 @@ fi
 echo -e "${YELLOW}Updating backend/.env...${NC}"
 cd ~/mieszkaniownik
 
+# Update ROOT .env file (for docker-compose build args)
+echo -e "${YELLOW}Updating root .env (Docker Compose)...${NC}"
+if [ -f ".env" ]; then
+    if grep -q "^VITE_API_BASE_URL=" .env; then
+        sed -i "s|^VITE_API_BASE_URL=.*|VITE_API_BASE_URL=http://${VPS_IP}:5001|" .env
+    else
+        echo "VITE_API_BASE_URL=http://${VPS_IP}:5001" >> .env
+    fi
+    echo -e "${GREEN}✅ Updated root .env${NC}"
+else
+    echo -e "${RED}❌ Root .env not found, creating it${NC}"
+    echo "VITE_API_BASE_URL=http://${VPS_IP}:5001" > .env
+fi
+
 # Backend updates
 if grep -q "^FRONTEND_URL=" backend/.env || grep -q "^FRONTEND_URL=" mieszkaniownik-backend/.env; then
     BACKEND_ENV="backend/.env"
