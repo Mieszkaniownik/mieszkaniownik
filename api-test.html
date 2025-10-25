@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API URL Test</title>
+</head>
+<body>
+    <h1>API URL Detection Test</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        // Copy the exact detection logic from api.js
+        function getApiBaseUrl() {
+            // Auto-detect based on current host
+            const hostname = window.location.hostname;
+            
+            // If running on localhost (development)
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:5001';
+            }
+            
+            // If running on VPS or production (use same host, backend port)
+            const protocol = window.location.protocol;
+            return `${protocol}//${hostname}:5001`;
+        }
+
+        const apiUrl = getApiBaseUrl();
+        
+        document.getElementById('results').innerHTML = `
+            <p><strong>Current hostname:</strong> ${window.location.hostname}</p>
+            <p><strong>Current protocol:</strong> ${window.location.protocol}</p>
+            <p><strong>Current port:</strong> ${window.location.port}</p>
+            <p><strong>Detected API URL:</strong> ${apiUrl}</p>
+            <hr>
+            <p>Testing API connection...</p>
+        `;
+
+        // Test API connection
+        try {
+            const response = await fetch(`${apiUrl}/health`);
+            const data = await response.text();
+            document.getElementById('results').innerHTML += `
+                <p><strong>✅ API Health Check:</strong> SUCCESS (${response.status})</p>
+                <p><strong>Response:</strong> ${data}</p>
+            `;
+        } catch (error) {
+            document.getElementById('results').innerHTML += `
+                <p><strong>❌ API Health Check:</strong> FAILED</p>
+                <p><strong>Error:</strong> ${error.message}</p>
+            `;
+        }
+    </script>
+</body>
+</html>
